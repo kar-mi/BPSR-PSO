@@ -19,13 +19,13 @@ You'll need to have the following software installed:
 
 * **Node.js**: <https://nodejs.org/>
 * **npm**: Comes bundled with Node.js.
-* **Npcap**: The installer is located in the `/resources` folder of this repository.
+* **Npcap**: The installer is located at https://npcap.com/dist/npcap-1.84.exe
 
 ### Installation
 
 1.  **Clone the repository:**
     ```bash
-    git clone https://github.com/Chase-Simmons/BPSR-PSO.git
+    git clone https://github.com/Chase-Simmons/BPSR-PSO.git //wah
     ```
 
 2.  **Navigate into the project directory:**
