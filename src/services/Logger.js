@@ -1,13 +1,33 @@
-import winston from 'winston';
+import pino from 'pino';
 
-const logger = winston.createLogger({
-    level: 'info',
-    format: winston.format.combine(
-        winston.format.colorize({ all: true }),
-        winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-        winston.format.printf((info) => `[${info.timestamp}] [${info.level}] ${info.message}`)
-    ),
-    transports: [new winston.transports.Console()],
-});
+class Logger {
+    constructor() {
+        this.logger = pino({
+            level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+            transport: {
+                target: 'pino-pretty',
+                options: {
+                    colorize: true,
+                },
+            },
+        });
+    }
 
-export default logger;
+    info(message, context = {}) {
+        this.logger.info(context, message);
+    }
+
+    error(message, context = {}) {
+        this.logger.error(context, message);
+    }
+
+    warn(message, context = {}) {
+        this.logger.warn(context, message);
+    }
+
+    debug(message, context = {}) {
+        this.logger.debug(context, message);
+    }
+}
+
+export default new Logger();

@@ -60,6 +60,8 @@
         "express": "^5.1.0",
         "google-protobuf": "^3.21.4",
         "long": "^5.3.2",
+        "pino": "^10.0.0",
+        "pino-pretty": "^13.1.2",
         "protobufjs": "^7.5.3",
         "socket.io": "^4.8.1",
         "winston": "^3.17.0"
