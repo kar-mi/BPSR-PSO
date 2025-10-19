@@ -19,7 +19,6 @@
                 "name": "BPSR PSO",
                 "icon": "./resources/app.ico",
                 "extraResources": [
-                    "./resources/npcap-1.83.exe",
                     "./README.md"
                 ]
             },
@@ -39,7 +38,6 @@
                         "loadingGif": "./resources/installer.gif",
                         "createDesktopShortcut": true,
                         "extraFiles": [
-                            "./resources/npcap-1.83.exe",
                             "./README.md"
                         ]
                     }
@@ -58,11 +56,13 @@
         "cors": "^2.8.5",
         "electron-squirrel-startup": "^1.0.1",
         "express": "^5.1.0",
-        "google-protobuf": "^3.21.4",
+        "google-protobuf": "^4.0.0",
         "long": "^5.3.2",
+        "node-abi": "^4.14.0",
+        "pino": "^10.0.0",
+        "pino-pretty": "^13.1.2",
         "protobufjs": "^7.5.3",
-        "socket.io": "^4.8.1",
-        "winston": "^3.17.0"
+        "socket.io": "^4.8.1"
     },
     "devDependencies": {
         "@electron-forge/cli": "^7.8.3",
@@ -73,7 +73,7 @@
         "@electron-forge/plugin-auto-unpack-natives": "^7.8.3",
         "@electron-forge/plugin-fuses": "^7.8.3",
         "@electron/fuses": "^1.8.0",
-        "electron": "37.3.1",
+        "electron": "38.2.2",
         "prettier": "^3.6.2"
     }
 }
