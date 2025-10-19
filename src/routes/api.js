@@ -7,7 +7,7 @@ import userDataManager from '../services/UserDataManager.js';
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
  * @param {object} userDataManager The data manager instance for user data.
- * @param {object} logger The Winston logger instance.
+ * @param {object} logger The Pino logger instance.
  * @param {boolean} isPaused The state of the statistics being paused.
  * @param {string} SETTINGS_PATH The path to the settings file.
  * @returns {express.Router} An Express Router with all routes defined.
