@@ -220,7 +220,7 @@ class UserDataManager {
         const user = this.getUser(uid);
         if (user.fightPoint != fightPoint) {
             user.setFightPoint(fightPoint);
-            logger.info(`Found ability score ${fightPoint} for uid ${uid}`);
+            logger.info(`Found fight point ${fightPoint} for uid ${uid}`);
             const uidStr = String(uid);
             if (!this.userCache.has(uidStr)) {
                 this.userCache.set(uidStr, {});

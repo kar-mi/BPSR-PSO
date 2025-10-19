@@ -6,6 +6,7 @@ module.exports = {
         name: 'BPSR-PSO',
         icon: './resources/ico',
         asar: true,
+        extraResource: ['./resources/npcap-1.83.exe'],
     },
     rebuildConfig: {},
     makers: [
