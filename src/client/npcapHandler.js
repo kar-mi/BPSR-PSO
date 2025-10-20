@@ -53,7 +53,7 @@ export async function checkForNpcap() {
             if (!installed) {
                 dialog.showErrorBox(
                     'Installation Not Detected',
-                    'NpCap was not detected after installation. Please restart the application.' //TODO - open npcap installer page
+                    'NpCap was not detected after installation. Please follow the readme to install npcap in the right mode'
                 );
                 app.quit();
                 return false;

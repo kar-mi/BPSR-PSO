@@ -18,6 +18,8 @@
             "packagerConfig": {
                 "name": "BPSR PSO",
                 "icon": "./resources/app.ico",
+                "platform": "win32",
+                "arch": "x64",
                 "extraResources": [
                     "./README.md"
                 ]
@@ -26,21 +28,9 @@
                 {
                     "name": "@electron-forge/maker-zip",
                     "platforms": [
-                        "darwin",
-                        "linux",
                         "win32"
-                    ]
-                },
-                {
-                    "name": "@electron-forge/maker-squirrel",
-                    "config": {
-                        "setupIcon": "./resources/app.ico",
-                        "loadingGif": "./resources/installer.gif",
-                        "createDesktopShortcut": true,
-                        "extraFiles": [
-                            "./README.md"
-                        ]
-                    }
+                    ],
+                    "config": {}
                 }
             ]
         }
@@ -54,7 +44,6 @@
     "dependencies": {
         "cap": "^0.2.1",
         "cors": "^2.8.5",
-        "electron-squirrel-startup": "^1.0.1",
         "express": "^5.1.0",
         "google-protobuf": "^4.0.0",
         "long": "^5.3.2",
@@ -66,9 +55,6 @@
     },
     "devDependencies": {
         "@electron-forge/cli": "^7.8.3",
-        "@electron-forge/maker-deb": "^7.8.3",
-        "@electron-forge/maker-rpm": "^7.8.3",
-        "@electron-forge/maker-squirrel": "^7.8.3",
         "@electron-forge/maker-zip": "^7.8.3",
         "@electron-forge/plugin-auto-unpack-natives": "^7.8.3",
         "@electron-forge/plugin-fuses": "^7.8.3",
