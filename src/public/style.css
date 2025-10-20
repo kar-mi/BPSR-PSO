@@ -142,6 +142,7 @@ body {
     border-radius: 2px;
     outline: none;
     -webkit-appearance: none;
+    appearance: none;
 }
 
 .opacity-control input[type='range']::-webkit-slider-thumb {
