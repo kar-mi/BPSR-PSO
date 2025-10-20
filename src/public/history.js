@@ -146,13 +146,29 @@ document.addEventListener('DOMContentLoaded', () => {
     historyContainer.classList.remove('hidden');
     updateHistoryView();
 
-    // Initialize date range inputs to default (last 7 days)
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 7);
+    // Initialize date range inputs - try to load from localStorage first
+    const savedStartDate = localStorage.getItem('historyStartDate');
+    const savedEndDate = localStorage.getItem('historyEndDate');
+
+    let endDate, startDate;
+
+    if (savedStartDate && savedEndDate) {
+        // Use saved dates
+        startDate = new Date(savedStartDate);
+        endDate = new Date(savedEndDate);
+    } else {
+        // Default to last 7 days
+        endDate = new Date();
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 7);
+    }
 
     document.getElementById('endDate').value = formatDateForInput(endDate);
     document.getElementById('startDate').value = formatDateForInput(startDate);
+
+    // Set the current date range for initial load
+    currentDateRange.startDate = startDate.toISOString();
+    currentDateRange.endDate = endDate.toISOString();
 
     // Initialize opacity slider
     const opacitySlider = document.getElementById('historyOpacitySlider');
@@ -171,6 +187,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem('historyBackgroundOpacity', newOpacity);
     });
 
+    // Load fight history with the initialized date range
     loadFightHistory();
 
     // Handle close button
@@ -262,15 +279,16 @@ function applyDateRange() {
     currentDateRange.startDate = startDate.toISOString();
     currentDateRange.endDate = endDate.toISOString();
 
+    // Save to localStorage for persistence
+    localStorage.setItem('historyStartDate', currentDateRange.startDate);
+    localStorage.setItem('historyEndDate', currentDateRange.endDate);
+
     console.log('Applying date range:', currentDateRange);
     loadFightHistory();
 }
 
 // Reset date range filter
 function resetDateRange() {
-    currentDateRange.startDate = null;
-    currentDateRange.endDate = null;
-
     // Reset to last 7 days
     const endDate = new Date();
     const startDate = new Date();
@@ -278,6 +296,13 @@ function resetDateRange() {
 
     document.getElementById('endDate').value = formatDateForInput(endDate);
     document.getElementById('startDate').value = formatDateForInput(startDate);
+
+    currentDateRange.startDate = startDate.toISOString();
+    currentDateRange.endDate = endDate.toISOString();
+
+    // Save to localStorage
+    localStorage.setItem('historyStartDate', currentDateRange.startDate);
+    localStorage.setItem('historyEndDate', currentDateRange.endDate);
 
     console.log('Resetting date range');
     loadFightHistory();
