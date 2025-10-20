@@ -304,3 +304,91 @@ body {
     white-space: nowrap;
     text-shadow: 1px 1px 1px #000;
 }
+
+.settings-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.settings-section h3 {
+    color: #fff;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    padding-bottom: 8px;
+}
+
+.keybind-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.keybind-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    transition: background-color 0.2s ease;
+}
+
+.keybind-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.keybind-label {
+    color: #fff;
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.keybind-shortcut {
+    background: rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ffc107;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-family: monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-width: 80px;
+    text-align: center;
+}
+
+.keybind-shortcut:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.keybind-shortcut.recording {
+    background: rgba(255, 193, 7, 0.2);
+    border-color: #ffc107;
+    color: #fff;
+    animation: pulse 1s infinite;
+}
+
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
+
+    50% {
+        opacity: 0.6;
+    }
+
+    100% {
+        opacity: 1;
+    }
+}
+
+.keybind-shortcut.error {
+    background: rgba(244, 67, 54, 0.2);
+    border-color: #f44336;
+    color: #fff;
+}

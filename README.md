@@ -52,3 +52,7 @@ To start the application, run the following command from the project root:
 ```bash
 npm start
 ```
+
+Added prs
+https://github.com/Chase-Simmons/BPSR-PSO/pull/23/files
+https://github.com/Chase-Simmons/BPSR-PSO/pull/20/files
