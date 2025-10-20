@@ -58,8 +58,18 @@ class Server {
     _configureProcessEvents() {
         const gracefulShutdown = async () => {
             try {
+                // Stop packet interceptor first to prevent new packets
+                PacketInterceptor.stop();
+
+                // Stop user data manager intervals to prevent new log messages
+                userDataManager.stop();
+
+                // Save user cache
                 await userDataManager.forceUserCacheSave();
+
+                // Flush logger and wait for it to finish
                 await logger.flush();
+
                 process.exit(0);
             } catch (error) {
                 console.error('Error during shutdown:', error);
