@@ -43,7 +43,10 @@ You'll need to have the following software installed:
 4.  **Install Node.js dependencies:**
     ```bash
     npm install
+    .\node_modules\.bin\electron-rebuild.cmd
     ```
+
+## Build issues
 
 ## Running the Application
 

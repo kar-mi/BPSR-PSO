@@ -23,7 +23,7 @@ jobs:
         run: npm ci
 
       - name: Build application
-        run: npm run make
+        run: npm run build
 
       - name: Get version from package.json
         id: package-version
@@ -36,7 +36,7 @@ jobs:
         id: find-zip
         shell: pwsh
         run: |
-          $zipFile = Get-ChildItem -Path "out/make/zip/win32-x64/*.zip" | Select-Object -First 1
+          $zipFile = Get-ChildItem -Path "dist/*.zip" | Select-Object -First 1
           echo "ZIP_PATH=$($zipFile.FullName)" >> $env:GITHUB_OUTPUT
           echo "ZIP_NAME=$($zipFile.Name)" >> $env:GITHUB_OUTPUT
 

@@ -5,35 +5,13 @@
     "description": "Blue Protocol: Star Resonance - Per Second Overlay",
     "main": "src/index.js",
     "scripts": {
-        "start": "electron-forge start",
-        "package": "electron-forge package",
-        "make": "electron-forge make",
-        "publish": "electron-forge publish",
+        "start": "electron .",
+        "rebuild": "electron-rebuild",
+        "build": "npm run rebuild && node build.js",
+        "build:dir": "electron-packager . \"BPSR PSO\" --platform=win32 --arch=x64 --out=dist --overwrite",
         "lint": "echo \"No linting configured\"",
         "format": "prettier --write \"**/*.{js,json,html}\"",
         "check-format": "prettier --check \"**/*.{js,json,html}\""
-    },
-    "config": {
-        "forge": {
-            "packagerConfig": {
-                "name": "BPSR PSO",
-                "icon": "./resources/app.ico",
-                "platform": "win32",
-                "arch": "x64",
-                "extraResources": [
-                    "./README.md"
-                ]
-            },
-            "makers": [
-                {
-                    "name": "@electron-forge/maker-zip",
-                    "platforms": [
-                        "win32"
-                    ],
-                    "config": {}
-                }
-            ]
-        }
     },
     "keywords": [],
     "author": {
@@ -48,18 +26,15 @@
         "google-protobuf": "^4.0.0",
         "long": "^5.3.2",
         "node-abi": "^4.14.0",
-        "pino": "^10.0.0",
+        "pino": "^10.1.0",
         "pino-pretty": "^13.1.2",
         "protobufjs": "^7.5.3",
         "socket.io": "^4.8.1"
     },
     "devDependencies": {
-        "@electron-forge/cli": "^7.8.3",
-        "@electron-forge/maker-zip": "^7.8.3",
-        "@electron-forge/plugin-auto-unpack-natives": "^7.8.3",
-        "@electron-forge/plugin-fuses": "^7.8.3",
-        "@electron/fuses": "^1.8.0",
-        "electron": "38.2.2",
+        "@electron/packager": "^18.3.5",
+        "@electron/rebuild": "^3.7.2",
+        "electron": "38.3.0",
         "prettier": "^3.6.2"
     }
 }
