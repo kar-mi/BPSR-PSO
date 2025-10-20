@@ -620,10 +620,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const newOpacity = event.target.value;
             setBackgroundOpacity(newOpacity);
             localStorage.setItem('backgroundOpacity', newOpacity);
-            // Notify Electron main process to sync with history window
-            if (window.electronAPI && window.electronAPI.notifyOpacityChanged) {
-                window.electronAPI.notifyOpacityChanged(newOpacity);
-            }
         });
     }
 

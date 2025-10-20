@@ -34,6 +34,18 @@
                         <button id="clearHistoryButton" onclick="clearFightHistory()" title="Clear History">
                             Clear
                         </button>
+                        <div class="opacity-control">
+                            <label for="historyOpacitySlider">Opacity</label>
+                            <input
+                                type="range"
+                                id="historyOpacitySlider"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value="0.05"
+                                title="Adjust Window Opacity"
+                            />
+                        </div>
                         <button id="closeButton" onclick="window.close()" title="Close Window">X</button>
                     </div>
                 </div>

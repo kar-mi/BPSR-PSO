@@ -41,11 +41,6 @@ ipcMain.on('open-history-window', async (event) => {
 
     const mainWindow = BrowserWindow.fromWebContents(event.sender);
 
-    // Get opacity from localStorage (much faster than CSS variable)
-    const savedOpacity = await mainWindow.webContents.executeJavaScript(`
-        localStorage.getItem('backgroundOpacity') || '0.05'
-    `);
-
     historyWindow = new BrowserWindow({
         width: 1000,
         height: 700,
@@ -69,23 +64,7 @@ ipcMain.on('open-history-window', async (event) => {
     historyWindow.setMovable(true);
     historyWindow.loadFile(historyHtmlPath);
 
-    // Set opacity once after page loads
-    historyWindow.webContents.on('did-finish-load', () => {
-        historyWindow.webContents.executeJavaScript(`
-            document.documentElement.style.setProperty('--main-bg-opacity', '${savedOpacity}');
-        `);
-    });
-
     historyWindow.on('closed', () => {
         historyWindow = null;
     });
-});
-
-// IPC handler for syncing opacity changes from main window to history window
-ipcMain.on('opacity-changed', (_event, newOpacity) => {
-    if (historyWindow && !historyWindow.isDestroyed()) {
-        historyWindow.webContents.executeJavaScript(`
-            document.documentElement.style.setProperty('--main-bg-opacity', '${newOpacity}');
-        `);
-    }
 });

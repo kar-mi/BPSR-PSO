@@ -16,7 +16,4 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Window management
     openHistoryWindow: () => ipcRenderer.send('open-history-window'),
-
-    // Opacity sync
-    notifyOpacityChanged: (opacity) => ipcRenderer.send('opacity-changed', opacity),
 });

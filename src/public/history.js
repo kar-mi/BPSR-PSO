@@ -154,6 +154,23 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('endDate').value = formatDateForInput(endDate);
     document.getElementById('startDate').value = formatDateForInput(startDate);
 
+    // Initialize opacity slider
+    const opacitySlider = document.getElementById('historyOpacitySlider');
+    const savedOpacity = localStorage.getItem('historyBackgroundOpacity');
+
+    if (savedOpacity !== null) {
+        opacitySlider.value = savedOpacity;
+        document.documentElement.style.setProperty('--main-bg-opacity', savedOpacity);
+    } else {
+        document.documentElement.style.setProperty('--main-bg-opacity', opacitySlider.value);
+    }
+
+    opacitySlider.addEventListener('input', (event) => {
+        const newOpacity = event.target.value;
+        document.documentElement.style.setProperty('--main-bg-opacity', newOpacity);
+        localStorage.setItem('historyBackgroundOpacity', newOpacity);
+    });
+
     loadFightHistory();
 
     // Handle close button
