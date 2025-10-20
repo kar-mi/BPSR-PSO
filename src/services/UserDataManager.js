@@ -28,19 +28,42 @@ class UserDataManager {
             maxHp: new Map(),
         };
 
+        // Track intervals for cleanup
+        this.intervals = [];
+        this.isShuttingDown = false;
+
         // 自动保存
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
-        setInterval(() => {
-            if (this.lastLogTime < this.lastAutoSaveTime) return;
-            this.lastAutoSaveTime = Date.now();
-            this.saveAllUserData();
-        }, 10 * 1000);
+        this.intervals.push(
+            setInterval(() => {
+                if (this.isShuttingDown) return;
+                if (this.lastLogTime < this.lastAutoSaveTime) return;
+                this.lastAutoSaveTime = Date.now();
+                this.saveAllUserData();
+            }, 10 * 1000)
+        );
 
         // New: Interval to clean up inactive users every 30 seconds
-        setInterval(() => {
-            this.cleanUpInactiveUsers();
-        }, 30 * 1000);
+        this.intervals.push(
+            setInterval(() => {
+                if (this.isShuttingDown) return;
+                this.cleanUpInactiveUsers();
+            }, 30 * 1000)
+        );
+    }
+
+    /**
+     * Stop all intervals and mark as shutting down
+     */
+    stop() {
+        this.isShuttingDown = true;
+        this.intervals.forEach((interval) => clearInterval(interval));
+        this.intervals = [];
+        if (this.saveThrottleTimer) {
+            clearTimeout(this.saveThrottleTimer);
+            this.saveThrottleTimer = null;
+        }
     }
 
     // New: Method to remove users who have not been updated in 60 seconds
@@ -304,11 +327,15 @@ class UserDataManager {
     clearAll() {
         const usersToSave = this.users;
         const saveStartTime = this.startTime;
+
         this.users = new Map();
         this.startTime = Date.now();
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
         this.saveAllUserData(usersToSave, saveStartTime);
+
+        // Emit clear event to frontend
+        socket.emit('data_cleared');
     }
 
     getUserIds() {

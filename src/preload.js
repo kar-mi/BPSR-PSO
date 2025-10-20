@@ -13,4 +13,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Action triggers
     onTriggerPauseResume: (callback) => ipcRenderer.on('trigger-pause-resume', callback),
     onTriggerClearData: (callback) => ipcRenderer.on('trigger-clear-data', callback),
+
+    // Window management
+    openHistoryWindow: () => ipcRenderer.send('open-history-window'),
 });

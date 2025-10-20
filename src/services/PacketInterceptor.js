@@ -26,7 +26,19 @@ const clearDataOnServerChange = () => {
 };
 
 export class PacketInterceptor {
+    static isRunning = true;
+    static cleanupInterval = null;
+
+    static stop() {
+        this.isRunning = false;
+        if (this.cleanupInterval) {
+            clearInterval(this.cleanupInterval);
+            this.cleanupInterval = null;
+        }
+    }
+
     static start(server, port, resolve, reject) {
+        this.isRunning = true;
         server.listen(port, async () => {
             const devices = cap.deviceList();
             let num;
@@ -252,7 +264,7 @@ export class PacketInterceptor {
             };
 
             (async () => {
-                while (true) {
+                while (PacketInterceptor.isRunning) {
                     if (eth_queue.length) {
                         const pkt = eth_queue.shift();
                         await processEthPacket(pkt);
@@ -262,7 +274,9 @@ export class PacketInterceptor {
                 }
             })();
 
-            setInterval(() => {
+            PacketInterceptor.cleanupInterval = setInterval(() => {
+                if (!PacketInterceptor.isRunning) return;
+
                 const now = Date.now();
                 let clearedFragments = 0;
                 fragmentIpCache.forEach((cacheEntry, key) => {
