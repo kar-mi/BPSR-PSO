@@ -229,6 +229,13 @@ async function loadFightHistory() {
 
         // Update the current view
         updateHistoryView();
+
+        // Re-render the appropriate view based on currentView
+        if (currentView === 'cumulative') {
+            renderCumulativeStats();
+        } else if (currentView === 'history') {
+            renderFightList();
+        }
     } catch (error) {
         console.error('Error loading fight history:', error);
     }
