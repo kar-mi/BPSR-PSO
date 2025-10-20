@@ -24,19 +24,10 @@ function getNextColorShades() {
     return { dps: dpsColor, hps: hpsColor };
 }
 
-const columnsContainer = document.getElementById('columnsContainer');
-const settingsContainer = document.getElementById('settingsContainer');
-const helpContainer = document.getElementById('helpContainer');
-const passthroughTitle = document.getElementById('passthroughTitle');
-const pauseButton = document.getElementById('pauseButton');
-const clearButton = document.getElementById('clearButton');
-const helpButton = document.getElementById('helpButton');
-const settingsButton = document.getElementById('settingsButton');
-const closeButton = document.getElementById('closeButton');
-const allButtons = [clearButton, pauseButton, helpButton, settingsButton, closeButton];
-const serverStatus = document.getElementById('serverStatus');
-const opacitySlider = document.getElementById('opacitySlider');
-const keybindList = document.getElementById('keybindList');
+// DOM elements - will be initialized after DOMContentLoaded
+let columnsContainer, settingsContainer, helpContainer, passthroughTitle;
+let pauseButton, clearButton, helpButton, settingsButton, closeButton;
+let allButtons, serverStatus, opacitySlider, keybindList;
 
 let allUsers = {};
 let userColors = {};
@@ -45,13 +36,18 @@ let socket = null;
 let isWebSocketConnected = false;
 let lastWebSocketMessage = Date.now();
 const WEBSOCKET_RECONNECT_INTERVAL = 5000;
+const WEBSOCKET_IDLE_TIMEOUT = 10000; // Consider stale after 10s of no messages
+let reconnectAttempts = 0;
+const MAX_RECONNECT_INTERVAL = 30000; // Cap backoff at 30s
 
 const SERVER_URL = 'localhost:8990';
 
 // Keybind management
 let currentKeybinds = {};
+let keybindMap = new Map(); // Optimized lookup for keybind validation
 let isRecordingKeybind = false;
 let currentRecordingElement = null;
+let keybindEventListeners = new Map(); // Track event listeners for cleanup
 
 function formatNumber(num) {
     if (isNaN(num)) return 'NaN';
@@ -61,12 +57,24 @@ function formatNumber(num) {
 }
 
 function renderDataList(users) {
-    columnsContainer.innerHTML = '';
+    // Early exit if no users
+    if (users.length === 0) {
+        columnsContainer.innerHTML = '';
+        return;
+    }
 
+    // Calculate totals and sort
     const totalDamageOverall = users.reduce((sum, user) => sum + user.total_damage.total, 0);
     const totalHealingOverall = users.reduce((sum, user) => sum + user.total_healing.total, 0);
 
     users.sort((a, b) => b.total_dps - a.total_dps);
+
+    // Pre-calculate reciprocals for percentage calculations (avoid division in loop)
+    const damageMultiplier = totalDamageOverall > 0 ? 100 / totalDamageOverall : 0;
+    const healingMultiplier = totalHealingOverall > 0 ? 100 / totalHealingOverall : 0;
+
+    // Use DocumentFragment for batch DOM insertion
+    const fragment = document.createDocumentFragment();
 
     users.forEach((user, index) => {
         if (!userColors[user.id]) {
@@ -76,10 +84,18 @@ function renderDataList(users) {
         const item = document.createElement('li');
 
         item.className = 'data-item';
-        const damagePercent = totalDamageOverall > 0 ? (user.total_damage.total / totalDamageOverall) * 100 : 0;
-        const healingPercent = totalHealingOverall > 0 ? (user.total_healing.total / totalHealingOverall) * 100 : 0;
+        const damagePercent = user.total_damage.total * damageMultiplier;
+        const healingPercent = user.total_healing.total * healingMultiplier;
 
-        const displayName = user.fightPoint ? `${user.name} (${user.fightPoint})` : user.name;
+        // Pre-format numbers to avoid multiple calls
+        const formattedDamageTotal = formatNumber(user.total_damage.total);
+        const formattedDPS = formatNumber(user.total_dps);
+        const damagePercentStr = damagePercent.toFixed(1);
+
+        const nameProfession = user.subProfession ? user.subProfession : 'unknown';
+        const displayName = user.fightPoint
+            ? `${user.name} - ${nameProfession} (${user.fightPoint})`
+            : user.name + `- ${nameProfession}`;
 
         let classIconHtml = '';
         const professionString = user.profession ? user.profession.trim() : '';
@@ -91,11 +107,15 @@ function renderDataList(users) {
 
         let subBarHtml = '';
         if (user.total_healing.total > 0 || user.total_hps > 0) {
+            const formattedHealingTotal = formatNumber(user.total_healing.total);
+            const formattedHPS = formatNumber(user.total_hps);
+            const healingPercentStr = healingPercent.toFixed(1);
+
             subBarHtml = `
                 <div class="sub-bar">
                     <div class="hps-bar-fill" style="width: ${healingPercent}%; background-color: ${colors.hps};"></div>
                     <div class="hps-stats">
-                       ${formatNumber(user.total_healing.total)} (${formatNumber(user.total_hps)} HPS, ${healingPercent.toFixed(1)}%)
+                       ${formattedHealingTotal} (${formattedHPS} HPS, ${healingPercentStr}%)
                     </div>
                 </div>
             `;
@@ -108,13 +128,17 @@ function renderDataList(users) {
                     <span class="rank">${index + 1}.</span>
                     ${classIconHtml}
                     <span class="name">${displayName}</span>
-                    <span class="stats">${formatNumber(user.total_damage.total)} (${formatNumber(user.total_dps)} DPS, ${damagePercent.toFixed(1)}%)</span>
+                    <span class="stats">${formattedDamageTotal} (${formattedDPS} DPS, ${damagePercentStr}%)</span>
                 </div>
             </div>
             ${subBarHtml}
         `;
-        columnsContainer.appendChild(item);
+        fragment.appendChild(item);
     });
+
+    // Single DOM update
+    columnsContainer.innerHTML = '';
+    columnsContainer.appendChild(fragment);
 }
 
 function updateAll() {
@@ -230,6 +254,7 @@ function connectWebSocket() {
 
     socket.on('connect', () => {
         isWebSocketConnected = true;
+        reconnectAttempts = 0; // Reset backoff on successful connection
         showServerStatus('connected');
         lastWebSocketMessage = Date.now();
     });
@@ -257,12 +282,28 @@ function connectWebSocket() {
 }
 
 function checkConnection() {
+    // Only check if disconnected or idle
+    const timeSinceLastMessage = Date.now() - lastWebSocketMessage;
+
+    // Handle disconnected state with exponential backoff
     if (!isWebSocketConnected && socket && socket.disconnected) {
         showServerStatus('reconnecting');
-        socket.connect();
+        reconnectAttempts++;
+        const backoffDelay = Math.min(
+            WEBSOCKET_RECONNECT_INTERVAL * Math.pow(2, reconnectAttempts - 1),
+            MAX_RECONNECT_INTERVAL
+        );
+
+        // Only reconnect if enough time has passed based on backoff
+        if (reconnectAttempts === 1 || timeSinceLastMessage >= backoffDelay) {
+            socket.connect();
+        }
+        return;
     }
 
-    if (isWebSocketConnected && Date.now() - lastWebSocketMessage > WEBSOCKET_RECONNECT_INTERVAL) {
+    // Handle idle connection (no messages for extended period)
+    if (isWebSocketConnected && timeSinceLastMessage > WEBSOCKET_IDLE_TIMEOUT) {
+        console.warn('Connection appears idle, reconnecting...');
         isWebSocketConnected = false;
         if (socket) socket.disconnect();
         connectWebSocket();
@@ -308,6 +349,13 @@ function setBackgroundOpacity(value) {
 async function loadKeybinds() {
     try {
         currentKeybinds = await window.electronAPI.getKeybinds();
+
+        // Sync keybindMap for O(1) lookups
+        keybindMap.clear();
+        Object.entries(currentKeybinds).forEach(([name, shortcut]) => {
+            keybindMap.set(name, shortcut);
+        });
+
         renderKeybindList();
     } catch (error) {
         console.error('Failed to load keybinds:', error);
@@ -315,6 +363,12 @@ async function loadKeybinds() {
 }
 
 function renderKeybindList() {
+    // Clean up old event listeners
+    keybindEventListeners.forEach((listener, element) => {
+        element.removeEventListener('click', listener);
+    });
+    keybindEventListeners.clear();
+
     keybindList.innerHTML = '';
 
     const keybindLabels = {
@@ -344,7 +398,11 @@ function renderKeybindList() {
         shortcutElement.className = 'keybind-shortcut';
         shortcutElement.textContent = shortcut;
         shortcutElement.dataset.keybindName = keybindName;
-        shortcutElement.addEventListener('click', () => startRecordingKeybind(keybindName, shortcutElement));
+
+        // Create listener and store it for cleanup
+        const clickListener = () => startRecordingKeybind(keybindName, shortcutElement);
+        shortcutElement.addEventListener('click', clickListener);
+        keybindEventListeners.set(shortcutElement, clickListener);
 
         item.appendChild(label);
         item.appendChild(shortcutElement);
@@ -419,10 +477,14 @@ async function handleKeybindRecording(event) {
 
     const newShortcut = modifiers.length > 0 ? `${modifiers.join('+')}+${key}` : key;
 
-    // Check if shortcut is already in use
-    const isAlreadyUsed = Object.entries(currentKeybinds).some(
-        ([name, shortcut]) => name !== keybindName && shortcut === newShortcut
-    );
+    // Check if shortcut is already in use (optimized with Map)
+    let isAlreadyUsed = false;
+    for (const [name, shortcut] of keybindMap) {
+        if (name !== keybindName && shortcut === newShortcut) {
+            isAlreadyUsed = true;
+            break;
+        }
+    }
 
     if (isAlreadyUsed) {
         currentRecordingElement.classList.add('error');
@@ -444,6 +506,7 @@ async function updateKeybind(keybindName, newShortcut) {
         const success = await window.electronAPI.updateKeybind(keybindName, newShortcut);
         if (success) {
             currentKeybinds[keybindName] = newShortcut;
+            keybindMap.set(keybindName, newShortcut); // Sync Map
             currentRecordingElement.textContent = newShortcut;
         } else {
             currentRecordingElement.classList.add('error');
@@ -464,7 +527,24 @@ async function updateKeybind(keybindName, newShortcut) {
     }
 }
 
+function initializeDOMElements() {
+    columnsContainer = document.getElementById('columnsContainer');
+    settingsContainer = document.getElementById('settingsContainer');
+    helpContainer = document.getElementById('helpContainer');
+    passthroughTitle = document.getElementById('passthroughTitle');
+    pauseButton = document.getElementById('pauseButton');
+    clearButton = document.getElementById('clearButton');
+    helpButton = document.getElementById('helpButton');
+    settingsButton = document.getElementById('settingsButton');
+    closeButton = document.getElementById('closeButton');
+    allButtons = [clearButton, pauseButton, helpButton, settingsButton, closeButton];
+    serverStatus = document.getElementById('serverStatus');
+    opacitySlider = document.getElementById('opacitySlider');
+    keybindList = document.getElementById('keybindList');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+    initializeDOMElements();
     initialize();
 
     const savedOpacity = localStorage.getItem('backgroundOpacity');
