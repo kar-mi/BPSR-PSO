@@ -304,11 +304,15 @@ class UserDataManager {
     clearAll() {
         const usersToSave = this.users;
         const saveStartTime = this.startTime;
+
         this.users = new Map();
         this.startTime = Date.now();
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
         this.saveAllUserData(usersToSave, saveStartTime);
+
+        // Emit clear event to frontend
+        socket.emit('data_cleared');
     }
 
     getUserIds() {

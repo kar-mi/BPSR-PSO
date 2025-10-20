@@ -56,3 +56,5 @@ npm start
 Added prs
 https://github.com/Chase-Simmons/BPSR-PSO/pull/23/files
 https://github.com/Chase-Simmons/BPSR-PSO/pull/20/files
+
+https://github.com/Chase-Simmons/BPSR-PSO/pull/18/files

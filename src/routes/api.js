@@ -209,15 +209,182 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
 
     // Get current settings
     router.get('/settings', (req, res) => {
-        res.json({ code: 0, data: globalSettings });
+        const settings = userDataManager.getGlobalSettings();
+        res.json({ code: 0, data: settings });
     });
 
     // Update settings
     router.post('/settings', async (req, res) => {
         const newSettings = req.body;
-        globalSettings = { ...globalSettings, ...newSettings };
-        await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(globalSettings, null, 2), 'utf8');
-        res.json({ code: 0, data: globalSettings });
+        const currentSettings = userDataManager.getGlobalSettings();
+        const updatedSettings = { ...currentSettings, ...newSettings };
+
+        try {
+            await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(updatedSettings, null, 2), 'utf8');
+            res.json({ code: 0, data: updatedSettings });
+        } catch (error) {
+            logger.error('Failed to save settings:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to save settings',
+            });
+        }
+    });
+
+    // Fight History API Endpoints
+    // Get list of fights from existing logs (with optional date range)
+    router.get('/fight/list', async (req, res) => {
+        try {
+            const { startDate, endDate } = req.query;
+            const startTimestamp = startDate ? new Date(startDate).getTime() : 0;
+            const endTimestamp = endDate ? new Date(endDate).getTime() : Date.now();
+
+            const logDirs = (await fsPromises.readdir('./logs', { withFileTypes: true }))
+                .filter((e) => e.isDirectory() && /^\d+$/.test(e.name))
+                .map((e) => parseInt(e.name))
+                .filter((timestamp) => timestamp >= startTimestamp && timestamp <= endTimestamp)
+                .sort((a, b) => b - a); // newest first
+
+            const fights = [];
+            for (const timestamp of logDirs) {
+                try {
+                    const userDataPath = path.join('./logs', timestamp.toString(), 'allUserData.json');
+                    const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+
+                    // Calculate total damage and healing from user data
+                    let totalDamage = 0;
+                    let totalHealing = 0;
+                    let userCount = 0;
+
+                    for (const [uid, user] of Object.entries(userData)) {
+                        totalDamage += user.total_damage?.total || 0;
+                        totalHealing += user.total_healing?.total || 0;
+                        if (user.total_damage?.total > 0 || user.total_healing?.total > 0) {
+                            userCount++;
+                        }
+                    }
+
+                    fights.push({
+                        id: `fight_${timestamp}`,
+                        startTime: timestamp,
+                        endTime: timestamp, // We don't have exact end time, using start as approximation
+                        duration: 0, // Duration not available from logs
+                        totalDamage,
+                        totalHealing,
+                        userCount,
+                    });
+                } catch (error) {
+                    logger.warn(`Failed to read log data for timestamp ${timestamp}:`, error);
+                }
+            }
+
+            res.json({
+                code: 0,
+                data: fights,
+            });
+        } catch (error) {
+            logger.error('Failed to load fight list:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to load fight list',
+            });
+        }
+    });
+
+    // Get cumulative statistics across all fights in date range
+    router.get('/fight/cumulative', async (req, res) => {
+        try {
+            const { startDate, endDate } = req.query;
+            const startTimestamp = startDate ? new Date(startDate).getTime() : 0;
+            const endTimestamp = endDate ? new Date(endDate).getTime() : Date.now();
+
+            const logDirs = (await fsPromises.readdir('./logs', { withFileTypes: true }))
+                .filter((e) => e.isDirectory() && /^\d+$/.test(e.name))
+                .map((e) => parseInt(e.name))
+                .filter((timestamp) => timestamp >= startTimestamp && timestamp <= endTimestamp);
+
+            let totalDamage = 0;
+            let totalHealing = 0;
+            let totalFights = 0;
+
+            for (const timestamp of logDirs) {
+                try {
+                    const userDataPath = path.join('./logs', timestamp.toString(), 'allUserData.json');
+                    const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+
+                    for (const [uid, user] of Object.entries(userData)) {
+                        totalDamage += user.total_damage?.total || 0;
+                        totalHealing += user.total_healing?.total || 0;
+                    }
+                    totalFights++;
+                } catch (error) {
+                    logger.warn(`Failed to read log data for timestamp ${timestamp}:`, error);
+                }
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    totalDamage,
+                    totalHealing,
+                    totalFights,
+                    totalDuration: 0, // Not available from logs
+                },
+            });
+        } catch (error) {
+            logger.error('Failed to calculate cumulative stats:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to calculate cumulative stats',
+            });
+        }
+    });
+
+    // Get specific fight data by timestamp
+    router.get('/fight/:fightId', async (req, res) => {
+        try {
+            const { fightId } = req.params;
+            const timestamp = fightId.replace('fight_', '');
+
+            const userDataPath = path.join('./logs', timestamp, 'allUserData.json');
+            const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+
+            // Calculate totals
+            let totalDamage = 0;
+            let totalHealing = 0;
+
+            for (const [uid, user] of Object.entries(userData)) {
+                totalDamage += user.total_damage?.total || 0;
+                totalHealing += user.total_healing?.total || 0;
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    id: fightId,
+                    startTime: parseInt(timestamp),
+                    endTime: parseInt(timestamp),
+                    duration: 0,
+                    totalDamage,
+                    totalHealing,
+                    userStats: userData,
+                },
+            });
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                logger.warn('Fight data file not found:', error);
+                res.status(404).json({
+                    code: 1,
+                    msg: 'Fight not found',
+                });
+            } else {
+                logger.error('Failed to read fight data:', error);
+                res.status(500).json({
+                    code: 1,
+                    msg: 'Failed to read fight data',
+                });
+            }
+        }
     });
 
     return router;

@@ -56,16 +56,19 @@ class Server {
         });
 
     _configureProcessEvents() {
-        process.on('SIGINT', () => {
-            userDataManager.forceUserCacheSave().then(() => {
+        const gracefulShutdown = async () => {
+            try {
+                await userDataManager.forceUserCacheSave();
+                await logger.flush();
                 process.exit(0);
-            });
-        });
-        process.on('SIGTERM', () => {
-            userDataManager.forceUserCacheSave().then(() => {
-                process.exit(0);
-            });
-        });
+            } catch (error) {
+                console.error('Error during shutdown:', error);
+                process.exit(1);
+            }
+        };
+
+        process.on('SIGINT', gracefulShutdown);
+        process.on('SIGTERM', gracefulShutdown);
     }
 
     _configureSocketEmitter() {
