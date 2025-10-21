@@ -7,7 +7,7 @@ import {
 } from './utils.js';
 
 // DOM elements - will be initialized after DOMContentLoaded
-let columnsContainer, settingsContainer, helpContainer, passthroughTitle;
+let columnsContainer, settingsContainer, helpContainer, passthroughTitle, passthroughKeybind;
 let pauseButton, clearButton, helpButton, settingsButton, closeButton;
 let allButtons, keybindList;
 let historyButton, timeoutSlider, timeoutValue;
@@ -456,6 +456,8 @@ function renderKeybindList() {
         item.appendChild(shortcutElement);
         keybindList.appendChild(item);
     });
+
+    setPassthroughKeybindText();
 }
 
 async function startRecordingKeybind(keybindName, element) {
@@ -556,6 +558,7 @@ async function updateKeybind(keybindName, newShortcut) {
             currentKeybinds[keybindName] = newShortcut;
             keybindMap.set(keybindName, newShortcut); // Sync Map
             currentRecordingElement.textContent = newShortcut;
+            setPassthroughKeybindText();
         } else {
             currentRecordingElement.classList.add('error');
             currentRecordingElement.textContent = 'Failed';
@@ -575,11 +578,23 @@ async function updateKeybind(keybindName, newShortcut) {
     }
 }
 
+function setPassthroughKeybindText() {
+    // Check if the passthroughKeybind element exists and currentKeybinds is available
+    if (typeof passthroughKeybind !== 'undefined' && currentKeybinds && currentKeybinds.togglePassthrough) {
+        // Get the shortcut string for the 'togglePassthrough' action
+        const shortcut = currentKeybinds.togglePassthrough;
+
+        // Set the text content of the passthroughKeybind span
+        passthroughKeybind.textContent = `Press ${shortcut} to exit passthrough mode.`;
+    }
+}
+
 function initializeDOMElements() {
     columnsContainer = document.getElementById('columnsContainer');
     settingsContainer = document.getElementById('settingsContainer');
     helpContainer = document.getElementById('helpContainer');
     passthroughTitle = document.getElementById('passthroughTitle');
+    passthroughKeybind = document.getElementById('passthroughKeybind');
     pauseButton = document.getElementById('pauseButton');
     clearButton = document.getElementById('clearButton');
     helpButton = document.getElementById('helpButton');
@@ -625,6 +640,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.classList.add('hidden');
             });
             passthroughTitle.classList.remove('hidden');
+            passthroughKeybind.classList.remove('hidden');
             columnsContainer.classList.remove('hidden');
             settingsContainer.classList.add('hidden');
             helpContainer.classList.add('hidden');
@@ -633,6 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.classList.remove('hidden');
             });
             passthroughTitle.classList.add('hidden');
+            passthroughKeybind.classList.add('hidden');
         }
     });
 
