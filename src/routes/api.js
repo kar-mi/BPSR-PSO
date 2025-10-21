@@ -3,6 +3,7 @@ import path from 'path';
 import logger from '../services/Logger.js';
 import { promises as fsPromises } from 'fs';
 import userDataManager from '../services/UserDataManager.js';
+import { reloadSkillConfig } from '../models/UserData.js';
 
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
@@ -82,6 +83,23 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             code: 0,
             msg: 'Statistics have been cleared!',
         });
+    });
+
+    // Reload skill names configuration
+    router.post('/reload-skills', (req, res) => {
+        logger.info('Reloading skill names configuration...');
+        const success = reloadSkillConfig();
+        if (success) {
+            res.json({
+                code: 0,
+                msg: 'Skill names reloaded successfully',
+            });
+        } else {
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to reload skill names. Check server logs for details.',
+            });
+        }
     });
 
     // Pause/Resume statistics

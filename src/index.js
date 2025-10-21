@@ -1,5 +1,6 @@
 import { app, BrowserWindow, globalShortcut } from 'electron';
 import { checkForNpcap } from './client/npcapHandler.js';
+import logger from './services/Logger.js';
 
 async function initialize() {
     const canProceed = await checkForNpcap();
@@ -40,6 +41,11 @@ app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
         initialize();
     }
+});
+
+app.on('before-quit', () => {
+    // Set shutdown flag early to prevent logging errors during window closure
+    logger.isShuttingDown = true;
 });
 
 app.on('will-quit', () => {

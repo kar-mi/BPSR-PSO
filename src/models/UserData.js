@@ -1,7 +1,34 @@
 import { StatisticData } from './StatisticData.js';
 import skill_names from '../tables/skill_names.json' with { type: 'json' };
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 
-const skillConfig = skill_names.skill_names;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+let skillConfig = skill_names.skill_names;
+
+// Path to skill names file
+const skillNamesPath = path.join(__dirname, '../tables/skill_names.json');
+
+/**
+ * Reload skill names from the JSON file
+ * Call this after editing skill_names.json to apply changes without restart
+ * @returns {boolean} True if reload was successful, false otherwise
+ */
+export function reloadSkillConfig() {
+    try {
+        const fileContent = fs.readFileSync(skillNamesPath, 'utf8');
+        const newSkillNames = JSON.parse(fileContent);
+        skillConfig = newSkillNames.skill_names;
+        console.log('✓ Skill names reloaded successfully');
+        return true;
+    } catch (e) {
+        console.error('Error reloading skill names:', e.message);
+        return false;
+    }
+}
 
 function getSubProfessionBySkillId(skillId) {
     switch (skillId) {
