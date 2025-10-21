@@ -412,7 +412,17 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     const fightDuration = summaryData.duration;
 
                     const userDataPath = path.join('./logs', timestamp.toString(), 'allUserData.json');
-                    const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+
+                    // Check if allUserData.json exists
+                    let userData = {};
+                    try {
+                        await fsPromises.access(userDataPath);
+                        userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+                    } catch (error) {
+                        // allUserData.json doesn't exist, skip this fight
+                        logger.warn(`Skipping fight ${timestamp}: allUserData.json not found`);
+                        continue;
+                    }
 
                     // Calculate total damage and healing from user data
                     let totalDamage = 0;

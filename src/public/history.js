@@ -181,22 +181,12 @@ document.addEventListener('DOMContentLoaded', () => {
     historyContainer.classList.remove('hidden');
     updateHistoryView();
 
-    // Initialize date range inputs - try to load from localStorage first
-    const savedStartDate = localStorage.getItem('historyStartDate');
-    const savedEndDate = localStorage.getItem('historyEndDate');
-
-    let endDate, startDate;
-
-    if (savedStartDate && savedEndDate) {
-        // Use saved dates
-        startDate = new Date(savedStartDate);
-        endDate = new Date(savedEndDate);
-    } else {
-        // Default to last 7 days
-        endDate = new Date();
-        startDate = new Date();
-        startDate.setDate(startDate.getDate() - 7);
-    }
+    // Initialize date range inputs - always reset to default on app open
+    // This ensures the end date is always in the future when the app starts
+    const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 1);
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - 7);
 
     document.getElementById('endDate').value = formatDateForInput(endDate);
     document.getElementById('startDate').value = formatDateForInput(startDate);
@@ -204,6 +194,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Set the current date range for initial load
     currentDateRange.startDate = startDate.toISOString();
     currentDateRange.endDate = endDate.toISOString();
+
+    // Save the initial date range to localStorage
+    localStorage.setItem('historyStartDate', currentDateRange.startDate);
+    localStorage.setItem('historyEndDate', currentDateRange.endDate);
 
     // Initialize opacity slider with utility function
     initializeOpacitySlider('historyOpacitySlider', 'historyBackgroundOpacity');
@@ -330,8 +324,9 @@ function applyDateRange() {
 
 // Reset date range filter
 function resetDateRange() {
-    // Reset to last 7 days
+    // Reset to last 7 days, with end date 1 day in the future
     const endDate = new Date();
+    endDate.setDate(endDate.getDate() + 1);
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 7);
 
