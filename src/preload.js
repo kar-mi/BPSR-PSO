@@ -19,4 +19,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openSkillsWindow: (data) => ipcRenderer.send('open-skills-window', data),
     refreshHistoryWindow: () => ipcRenderer.send('refresh-history-window'),
     onHistoryDataUpdated: (callback) => ipcRenderer.on('history-data-updated', callback),
+
+    // Window resizing
+    resizeWindow: (bounds) => ipcRenderer.send('resize-window', bounds),
+    getWindowBounds: () => ipcRenderer.invoke('get-window-bounds'),
 });

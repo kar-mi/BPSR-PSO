@@ -128,6 +128,27 @@ ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId 
     });
 });
 
+// Window resize handlers
+ipcMain.on('resize-window', (event, bounds) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (window) {
+        window.setBounds({
+            x: Math.round(bounds.x),
+            y: Math.round(bounds.y),
+            width: Math.round(bounds.width),
+            height: Math.round(bounds.height),
+        });
+    }
+});
+
+ipcMain.handle('get-window-bounds', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender);
+    if (window) {
+        return window.getBounds();
+    }
+    return null;
+});
+
 // Helper function to notify history window
 export function notifyHistoryWindowRefresh() {
     if (historyWindow && !historyWindow.isDestroyed()) {
