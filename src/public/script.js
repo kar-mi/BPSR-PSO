@@ -676,12 +676,115 @@ function initializeDOMElements() {
     keybindList = document.getElementById('keybindList');
 }
 
+/**
+ * Initialize resize handles for dragging to resize window
+ */
+function initializeResizeHandles() {
+    const handles = document.querySelectorAll('.resize-handle');
+
+    handles.forEach(handle => {
+        let isResizing = false;
+        let startX, startY, startWidth, startHeight, startWindowX, startWindowY;
+        let resizeDirection = '';
+
+        // Determine resize direction from class name
+        if (handle.classList.contains('resize-handle-top')) resizeDirection = 'top';
+        else if (handle.classList.contains('resize-handle-bottom')) resizeDirection = 'bottom';
+        else if (handle.classList.contains('resize-handle-left')) resizeDirection = 'left';
+        else if (handle.classList.contains('resize-handle-right')) resizeDirection = 'right';
+        else if (handle.classList.contains('resize-handle-top-left')) resizeDirection = 'top-left';
+        else if (handle.classList.contains('resize-handle-top-right')) resizeDirection = 'top-right';
+        else if (handle.classList.contains('resize-handle-bottom-left')) resizeDirection = 'bottom-left';
+        else if (handle.classList.contains('resize-handle-bottom-right')) resizeDirection = 'bottom-right';
+
+        handle.addEventListener('mousedown', async (e) => {
+            e.preventDefault();
+            isResizing = true;
+
+            startX = e.screenX;
+            startY = e.screenY;
+
+            // Get initial window size and position
+            const windowBounds = await window.electronAPI.getWindowBounds();
+            startWidth = windowBounds.width;
+            startHeight = windowBounds.height;
+            startWindowX = windowBounds.x;
+            startWindowY = windowBounds.y;
+
+            const handleMouseMove = (moveEvent) => {
+                if (!isResizing) return;
+
+                const deltaX = moveEvent.screenX - startX;
+                const deltaY = moveEvent.screenY - startY;
+
+                let newWidth = startWidth;
+                let newHeight = startHeight;
+                let newX = startWindowX;
+                let newY = startWindowY;
+
+                // Calculate new dimensions based on resize direction
+                switch (resizeDirection) {
+                    case 'right':
+                        newWidth = Math.max(400, startWidth + deltaX);
+                        break;
+                    case 'left':
+                        newWidth = Math.max(400, startWidth - deltaX);
+                        newX = startWindowX + (startWidth - newWidth);
+                        break;
+                    case 'bottom':
+                        newHeight = Math.max(42, startHeight + deltaY);
+                        break;
+                    case 'top':
+                        newHeight = Math.max(42, startHeight - deltaY);
+                        newY = startWindowY + (startHeight - newHeight);
+                        break;
+                    case 'bottom-right':
+                        newWidth = Math.max(400, startWidth + deltaX);
+                        newHeight = Math.max(42, startHeight + deltaY);
+                        break;
+                    case 'bottom-left':
+                        newWidth = Math.max(400, startWidth - deltaX);
+                        newHeight = Math.max(42, startHeight + deltaY);
+                        newX = startWindowX + (startWidth - newWidth);
+                        break;
+                    case 'top-right':
+                        newWidth = Math.max(400, startWidth + deltaX);
+                        newHeight = Math.max(42, startHeight - deltaY);
+                        newY = startWindowY + (startHeight - newHeight);
+                        break;
+                    case 'top-left':
+                        newWidth = Math.max(400, startWidth - deltaX);
+                        newHeight = Math.max(42, startHeight - deltaY);
+                        newX = startWindowX + (startWidth - newWidth);
+                        newY = startWindowY + (startHeight - newHeight);
+                        break;
+                }
+
+                // Send resize request to main process
+                window.electronAPI.resizeWindow({ x: newX, y: newY, width: newWidth, height: newHeight });
+            };
+
+            const handleMouseUp = () => {
+                isResizing = false;
+                document.removeEventListener('mousemove', handleMouseMove);
+                document.removeEventListener('mouseup', handleMouseUp);
+            };
+
+            document.addEventListener('mousemove', handleMouseMove);
+            document.addEventListener('mouseup', handleMouseUp);
+        });
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeDOMElements();
     initialize();
 
     // Initialize opacity slider with utility function
     initializeOpacitySlider('opacitySlider', 'backgroundOpacity');
+
+    // Initialize resize handles
+    initializeResizeHandles();
 
     settingsButton.addEventListener('click', () => {
         if (!settingsContainer.classList.contains('hidden')) {

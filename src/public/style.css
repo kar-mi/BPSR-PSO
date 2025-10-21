@@ -25,6 +25,80 @@ body {
     padding: 0px;
     overflow: hidden;
     border-radius: 12px;
+    position: relative;
+}
+
+/* Resize handles */
+.resize-handle {
+    pointer-events: auto;
+    position: absolute;
+    z-index: 1000;
+}
+
+/* Edge handles */
+.resize-handle-top {
+    top: 0;
+    left: 8px;
+    right: 8px;
+    height: 4px;
+    cursor: ns-resize;
+}
+
+.resize-handle-bottom {
+    bottom: 0;
+    left: 8px;
+    right: 8px;
+    height: 4px;
+    cursor: ns-resize;
+}
+
+.resize-handle-left {
+    left: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 4px;
+    cursor: ew-resize;
+}
+
+.resize-handle-right {
+    right: 0;
+    top: 8px;
+    bottom: 8px;
+    width: 4px;
+    cursor: ew-resize;
+}
+
+/* Corner handles */
+.resize-handle-top-left {
+    top: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    cursor: nwse-resize;
+}
+
+.resize-handle-top-right {
+    top: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    cursor: nesw-resize;
+}
+
+.resize-handle-bottom-left {
+    bottom: 0;
+    left: 0;
+    width: 8px;
+    height: 8px;
+    cursor: nesw-resize;
+}
+
+.resize-handle-bottom-right {
+    bottom: 0;
+    right: 0;
+    width: 8px;
+    height: 8px;
+    cursor: nwse-resize;
 }
 
 .main-container {
