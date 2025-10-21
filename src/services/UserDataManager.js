@@ -43,6 +43,8 @@ class UserDataManager {
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
 
+        this.currentFightId = this.startTime;
+
         //check every 5 seconds for timeout
         this.intervals.push(
             setInterval(() => {
@@ -205,8 +207,19 @@ class UserDataManager {
         user.addTakenDamage(damage, isDead);
     }
 
+    /**
+     * Helper to notify the start of a new fight.
+     * Called when the first log of a new fight is written.
+     */
+    _notifyNewFightStarted() {
+        socket.emit('new_fight_started', { fightId: this.currentFightId });
+        logger.info(`New fight started (ID: ${this.currentFightId})`);
+    }
+
     async addLog(log) {
         if (config.IS_PAUSED) return;
+
+        const isFirstLog = this.lastLogTime === 0;
 
         const logDir = path.join('./logs', String(this.startTime));
         const logFile = path.join(logDir, 'fight.log');
@@ -226,6 +239,10 @@ class UserDataManager {
                 this.logDirExist.add(logDir);
             }
             await fsPromises.appendFile(logFile, logEntry, 'utf8');
+
+            if (isFirstLog) {
+                this._notifyNewFightStarted();
+            }
         } catch (error) {
             logger.error('Failed to save log:', error);
         }

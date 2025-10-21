@@ -388,6 +388,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 try {
                     // Check if fight.log exists before including this fight
                     const fightLogPath = path.join('./logs', timestamp.toString(), 'fight.log');
+                    const summaryPath = path.join('./logs', timestamp.toString(), 'summary.json');
                     try {
                         // Check if the file exists
                         await fsPromises.access(fightLogPath);
@@ -404,6 +405,11 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                         logger.warn(`Skipping fight ${timestamp}: fight.log not found`);
                         continue;
                     }
+
+                    const summaryData = JSON.parse(await fsPromises.readFile(summaryPath, 'utf8'));
+                    const fightStartTime = summaryData.startTime;
+                    const fightEndTime = summaryData.endTime;
+                    const fightDuration = summaryData.duration;
 
                     const userDataPath = path.join('./logs', timestamp.toString(), 'allUserData.json');
                     const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
@@ -423,9 +429,9 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
 
                     fights.push({
                         id: `fight_${timestamp}`,
-                        startTime: timestamp,
-                        endTime: timestamp, // We don't have exact end time, using start as approximation
-                        duration: 0, // Duration not available from logs
+                        startTime: fightStartTime,
+                        endTime: fightEndTime, // We don't have exact end time, using start as approximation
+                        duration: fightDuration, // Duration not available from logs
                         totalDamage,
                         totalHealing,
                         userCount,

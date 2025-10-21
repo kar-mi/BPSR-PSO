@@ -1,5 +1,12 @@
 // Fight History Window JavaScript
-import { SERVER_URL, getNextColorShades, formatNumber, getProfessionIconHtml, initializeOpacitySlider, formatDateForInput } from './utils.js';
+import {
+    SERVER_URL,
+    getNextColorShades,
+    formatNumber,
+    getProfessionIconHtml,
+    initializeOpacitySlider,
+    formatDateForInput,
+} from './utils.js';
 
 // State variables
 let currentView = 'history'; // 'cumulative', 'history'
@@ -399,6 +406,7 @@ function renderFightList() {
         fightItem.onclick = () => viewFight(fight.id);
 
         const startTime = new Date(fight.startTime);
+        const endTime = new Date(fight.endTime);
 
         const totalDamage = fight.totalDamage || 0;
         const totalHealing = fight.totalHealing || 0;
@@ -406,7 +414,7 @@ function renderFightList() {
 
         fightItem.innerHTML = `
             <div class="fight-item-info">
-                <div class="fight-item-id">${startTime.toLocaleString()}</div>
+                <div class="fight-item-id">${startTime.toLocaleString()} - ${endTime.toLocaleString()}</div>
                 <div class="fight-item-time">${userCount} active user${userCount !== 1 ? 's' : ''}</div>
             </div>
             <div class="fight-item-stats">
@@ -430,7 +438,8 @@ function parseStatData(data) {
             let str = data;
             // Handle @{key=value;...} format
             if (str.startsWith('@{') && str.endsWith('}')) {
-                str = str.slice(2, -1)
+                str = str
+                    .slice(2, -1)
                     .replace(/(\w+)=/g, '"$1":')
                     .replace(/;/g, ',');
                 str = '{' + str + '}';
@@ -567,7 +576,7 @@ function renderFightDetailsTable() {
     };
 
     // Determine column labels based on data type
-    const dpsLabel = isTanking ? 'DTPS' : (isDamage ? 'DPS' : 'HPS');
+    const dpsLabel = isTanking ? 'DTPS' : isDamage ? 'DPS' : 'HPS';
     const showCritLucky = !isTanking; // Don't show crit/lucky for tanking
 
     // Create table HTML
@@ -618,7 +627,7 @@ function renderFightDetailsTable() {
         }
         const colors = userColors[user.id];
         // Use a different color scheme for tanking (could use red/orange tones)
-        const barColor = isTanking ? 'hsl(0, 70%, 25%)' : (isDamage ? colors.dps : colors.hps);
+        const barColor = isTanking ? 'hsl(0, 70%, 25%)' : isDamage ? colors.dps : colors.hps;
 
         // Get profession icon
         const classIconHtml = getProfessionIconHtml(user.profession, 'small');
@@ -753,7 +762,10 @@ async function reloadFightData(fightId, enemyFilter = 'all') {
                     };
                 }
 
-                console.log(`Loaded fight ${fightId} with ${Object.keys(allUsers).length} users (enemy: ${enemyFilter}):`, allUsers);
+                console.log(
+                    `Loaded fight ${fightId} with ${Object.keys(allUsers).length} users (enemy: ${enemyFilter}):`,
+                    allUsers
+                );
 
                 renderFightDetailsTable();
             } else {
@@ -845,6 +857,7 @@ function updateHistoryView() {
 
 // Clear fight history (disabled - logs are permanent)
 async function clearFightHistory() {
-    alert('Fight history is now based on permanent log files and cannot be cleared from this interface. To remove logs, manually delete the log directories.');
+    alert(
+        'Fight history is now based on permanent log files and cannot be cleared from this interface. To remove logs, manually delete the log directories.'
+    );
 }
-
