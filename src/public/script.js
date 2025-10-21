@@ -7,7 +7,7 @@ import {
 } from './utils.js';
 
 // DOM elements - will be initialized after DOMContentLoaded
-let columnsContainer, settingsContainer, helpContainer, passthroughTitle;
+let columnsContainer, settingsContainer, helpContainer, passthroughTitle, passthroughKeybind, encounterTimer;
 let pauseButton, clearButton, helpButton, settingsButton, closeButton;
 let allButtons, keybindList;
 let historyButton, timeoutSlider, timeoutValue;
@@ -22,6 +22,10 @@ const WEBSOCKET_RECONNECT_INTERVAL = 5000;
 const WEBSOCKET_IDLE_TIMEOUT = 10000; // Consider stale after 10s of no messages
 let reconnectAttempts = 0;
 const MAX_RECONNECT_INTERVAL = 30000; // Cap backoff at 30s
+
+//Timer
+let encounterStartTime = null;
+let timerInterval = null;
 
 // Keybind management
 let currentKeybinds = {};
@@ -254,6 +258,7 @@ function connectWebSocket() {
         allUsers = {};
         userColors = {};
         updateAll();
+        stopEncounterTimer();
     });
 
     socket.on('new_fight_started', (data) => {
@@ -261,6 +266,7 @@ function connectWebSocket() {
         allUsers = {};
         userColors = {};
         updateAll();
+        startEncounterTimer();
     });
 
     socket.on('fight_ended', () => {
@@ -270,6 +276,7 @@ function connectWebSocket() {
         clearData();
         updateAll();
     });
+
     socket.on('connect_error', (error) => {
         showServerStatus('disconnected');
         console.error('WebSocket connection error:', error);
@@ -387,6 +394,67 @@ async function updateFightTimeout(seconds) {
     }
 }
 
+//Encounter Timer
+/**
+ * Formats a duration in milliseconds into H:MM:SS or M:SS format.
+ * @param {number} durationMs - The duration in milliseconds.
+ */
+function formatDuration(durationMs) {
+    const totalSeconds = Math.floor(durationMs / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+
+    const formattedMinutes = minutes.toString().padStart(2, '0');
+    const formattedSeconds = seconds.toString().padStart(2, '0');
+
+    if (hours > 0) {
+        return `${hours}:${formattedMinutes}:${formattedSeconds}`;
+    } else {
+        return `${minutes}:${formattedSeconds}`;
+    }
+}
+
+/**
+ * Starts or updates the encounter timer display.
+ */
+function updateEncounterTimerDisplay() {
+    if (encounterTimer && encounterStartTime) {
+        const duration = Date.now() - encounterStartTime;
+        encounterTimer.textContent = formatDuration(duration);
+    }
+}
+
+/**
+ * Manages the timer interval.
+ */
+function startEncounterTimer() {
+    if (timerInterval) clearInterval(timerInterval); // Clear any existing timer
+
+    // Set the initial start time
+    encounterStartTime = Date.now();
+
+    // Update immediately
+    updateEncounterTimerDisplay();
+
+    // Start interval to update every second
+    timerInterval = setInterval(updateEncounterTimerDisplay, 1000);
+}
+
+/**
+ * Stops the timer and resets the display.
+ */
+function stopEncounterTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    encounterStartTime = null;
+    if (encounterTimer) {
+        encounterTimer.textContent = '00:00';
+    }
+}
+
 // Fight History Functions
 function toggleHistory() {
     // Open history window using Electron API
@@ -456,6 +524,8 @@ function renderKeybindList() {
         item.appendChild(shortcutElement);
         keybindList.appendChild(item);
     });
+
+    setPassthroughKeybindText();
 }
 
 async function startRecordingKeybind(keybindName, element) {
@@ -556,6 +626,7 @@ async function updateKeybind(keybindName, newShortcut) {
             currentKeybinds[keybindName] = newShortcut;
             keybindMap.set(keybindName, newShortcut); // Sync Map
             currentRecordingElement.textContent = newShortcut;
+            setPassthroughKeybindText();
         } else {
             currentRecordingElement.classList.add('error');
             currentRecordingElement.textContent = 'Failed';
@@ -575,11 +646,24 @@ async function updateKeybind(keybindName, newShortcut) {
     }
 }
 
+function setPassthroughKeybindText() {
+    // Check if the passthroughKeybind element exists and currentKeybinds is available
+    if (typeof passthroughKeybind !== 'undefined' && currentKeybinds && currentKeybinds.togglePassthrough) {
+        // Get the shortcut string for the 'togglePassthrough' action
+        const shortcut = currentKeybinds.togglePassthrough;
+
+        // Set the text content of the passthroughKeybind span
+        passthroughKeybind.textContent = `Press ${shortcut} to exit passthrough mode.`;
+    }
+}
+
 function initializeDOMElements() {
     columnsContainer = document.getElementById('columnsContainer');
     settingsContainer = document.getElementById('settingsContainer');
     helpContainer = document.getElementById('helpContainer');
     passthroughTitle = document.getElementById('passthroughTitle');
+    passthroughKeybind = document.getElementById('passthroughKeybind');
+    encounterTimer = document.getElementById('encounterTimer');
     pauseButton = document.getElementById('pauseButton');
     clearButton = document.getElementById('clearButton');
     helpButton = document.getElementById('helpButton');
@@ -625,6 +709,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.classList.add('hidden');
             });
             passthroughTitle.classList.remove('hidden');
+            passthroughKeybind.classList.remove('hidden');
             columnsContainer.classList.remove('hidden');
             settingsContainer.classList.add('hidden');
             helpContainer.classList.add('hidden');
@@ -633,6 +718,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 button.classList.remove('hidden');
             });
             passthroughTitle.classList.add('hidden');
+            passthroughKeybind.classList.add('hidden');
         }
     });
 
