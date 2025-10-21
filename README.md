@@ -1,9 +1,29 @@
 # BPSR-PSO
 
-**Forked from:** https://github.com/dmlgzs/StarResonanceDamageCounter
+**Forked from:** https://github.com/dmlgzs/StarResonanceDamageCounter / https://github.com/Chase-Simmons/BPSR-PSO
 
 Blue Protocol: Star Resonance - Per Second Overlay
 Provides a useful GUI to track DPS / HPS for nearby players
+
+## Screenshots
+
+### Main DPS Meter
+
+![Main Meter](screenshots/main_meter.png)
+
+Real-time damage tracking overlay showing player performance during combat.
+
+### Skill Breakdown
+
+![Skill Breakdown](screenshots/skill_breakdown.png)
+
+Detailed skill-by-skill analysis with DPS graphs, damage distribution, and performance metrics including critical hit rates and lucky hit percentages.
+
+### Fight History
+
+![Fight History](screenshots/history.png)
+
+Track and review past encounters with damage,healing, and tanking totals across different time periods.
 
 ## About the Project
 
@@ -51,38 +71,8 @@ You'll need to have the following software installed:
 To start the application, run the following command from the project root:
 
 ```bash
-npm start
+npm start dev
 ```
-
-## Configuration
-
-### Updating Skill Names
-
-The skill names are stored in `src/tables/skill_names.json`. If you need to update skill names:
-
-1. **Edit the file**: Make your changes to `src/tables/skill_names.json`
-2. **Save the file**
-3. **Reload the configuration**: Send a POST request to reload the skill names without restarting:
-
-   ```bash
-   # Using curl (Windows PowerShell)
-   Invoke-WebRequest -Uri "http://localhost:8990/api/reload-skills" -Method POST
-
-   # Using curl (Git Bash or WSL)
-   curl -X POST http://localhost:8990/api/reload-skills
-   ```
-
-   You should see a response like:
-   ```json
-   {
-     "code": 0,
-     "msg": "Skill names reloaded successfully"
-   }
-   ```
-
-4. **Verify**: The server logs will show `✓ Skill names reloaded successfully`
-
-The updated skill names will now be visible in the overlay without needing to restart the application.
 
 ## Building for Production
 
@@ -103,33 +93,7 @@ The output will be: `dist/BPSR-PSO-win32-x64.zip`
 ### Build Requirements
 
 - **7z (optional)**: For better compression. The build script will automatically use 7z if installed, otherwise falls back to PowerShell's Compress-Archive.
-
-## Creating a Release
-
-To create a new release on GitHub:
-
-1. **Update the version** in [package.json](package.json):
-
-    ```bash
-    npm version patch  # for bug fixes (2.0.1 -> 2.0.2)
-    npm version minor  # for new features (2.0.1 -> 2.1.0)
-    npm version major  # for breaking changes (2.0.1 -> 3.0.0)
-    ```
-
-2. **Push the version tag** to trigger the GitHub Actions workflow:
-
-    ```bash
-    git push origin master --tags
-    ```
-
-3. The GitHub Actions workflow will automatically:
-    - Build the application
-    - Create a GitHub release with the version tag
-    - Upload the ZIP file as a release asset
-
-The release will be available at: `https://github.com/kar-mi/BPSR-PSO/releases`
-
-Added prs
+  Added prs
 
 ```
 https://github.com/Chase-Simmons/BPSR-PSO/pull/23/files
