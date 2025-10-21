@@ -26,7 +26,7 @@ You'll need to have the following software installed:
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/Chase-Simmons/BPSR-PSO.git //wah
+    git clone https://github.com/kar-mi/BPSR-PSO.git
     ```
 
 2.  **Navigate into the project directory:**
@@ -54,6 +54,36 @@ To start the application, run the following command from the project root:
 npm start
 ```
 
+## Configuration
+
+### Updating Skill Names
+
+The skill names are stored in `src/tables/skill_names.json`. If you need to update skill names:
+
+1. **Edit the file**: Make your changes to `src/tables/skill_names.json`
+2. **Save the file**
+3. **Reload the configuration**: Send a POST request to reload the skill names without restarting:
+
+   ```bash
+   # Using curl (Windows PowerShell)
+   Invoke-WebRequest -Uri "http://localhost:8990/api/reload-skills" -Method POST
+
+   # Using curl (Git Bash or WSL)
+   curl -X POST http://localhost:8990/api/reload-skills
+   ```
+
+   You should see a response like:
+   ```json
+   {
+     "code": 0,
+     "msg": "Skill names reloaded successfully"
+   }
+   ```
+
+4. **Verify**: The server logs will show `✓ Skill names reloaded successfully`
+
+The updated skill names will now be visible in the overlay without needing to restart the application.
+
 ## Building for Production
 
 To create a distributable build of the application:
@@ -63,6 +93,7 @@ npm run build
 ```
 
 This will:
+
 1. Rebuild native modules for Electron compatibility
 2. Package the application for Windows x64
 3. Create a ZIP file in the `dist/` directory
@@ -78,26 +109,36 @@ The output will be: `dist/BPSR-PSO-win32-x64.zip`
 To create a new release on GitHub:
 
 1. **Update the version** in [package.json](package.json):
-   ```bash
-   npm version patch  # for bug fixes (2.0.1 -> 2.0.2)
-   npm version minor  # for new features (2.0.1 -> 2.1.0)
-   npm version major  # for breaking changes (2.0.1 -> 3.0.0)
-   ```
+
+    ```bash
+    npm version patch  # for bug fixes (2.0.1 -> 2.0.2)
+    npm version minor  # for new features (2.0.1 -> 2.1.0)
+    npm version major  # for breaking changes (2.0.1 -> 3.0.0)
+    ```
 
 2. **Push the version tag** to trigger the GitHub Actions workflow:
-   ```bash
-   git push origin master --tags
-   ```
+
+    ```bash
+    git push origin master --tags
+    ```
 
 3. The GitHub Actions workflow will automatically:
-   - Build the application
-   - Create a GitHub release with the version tag
-   - Upload the ZIP file as a release asset
+    - Build the application
+    - Create a GitHub release with the version tag
+    - Upload the ZIP file as a release asset
 
-The release will be available at: `https://github.com/Chase-Simmons/BPSR-PSO/releases`
+The release will be available at: `https://github.com/kar-mi/BPSR-PSO/releases`
 
 Added prs
+
+```
 https://github.com/Chase-Simmons/BPSR-PSO/pull/23/files
 https://github.com/Chase-Simmons/BPSR-PSO/pull/20/files
-
 https://github.com/Chase-Simmons/BPSR-PSO/pull/18/files
+```
+
+```
+Translations
+```
+
+https://github.com/Zaarrg/BlueProtocolStarResonanceDataAnalysis/tree/master/Data/ProcessedGameData/StarResonanceDps_Data

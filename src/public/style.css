@@ -193,6 +193,14 @@ body {
     background-color: #ff9800;
     box-shadow: 0 0 8px #ff9800;
 }
+#serverStatus.saving {
+    background-color: #9c27b0;
+    box-shadow: 0 0 8px #9c27b0;
+}
+#serverStatus.error {
+    background-color: #e91e63;
+    box-shadow: 0 0 8px #e91e63;
+}
 
 .columns-container {
     display: flex;
@@ -700,4 +708,419 @@ body {
 .fight-item-duration {
     font-size: 11px;
     color: #999;
+}
+
+/* Skill Breakdown Styles */
+.skills-container {
+    flex-grow: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    color: #fff;
+    overflow-y: auto;
+}
+
+.skills-content {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.user-info {
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-details h3 {
+    margin: 0 0 8px 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+}
+
+.user-details p {
+    margin: 4px 0;
+    font-size: 13px;
+    color: #ccc;
+}
+
+.user-id {
+    font-size: 11px !important;
+    color: #999 !important;
+    font-family: monospace;
+}
+
+.skills-table {
+    overflow-x: auto;
+}
+
+.skills-table table {
+    width: 100%;
+    border-collapse: collapse;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.skills-table thead {
+    background: rgba(0, 0, 0, 0.3);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.skills-table th {
+    padding: 12px 8px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: #aaa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.skills-table th:last-child {
+    border-right: none;
+}
+
+.skills-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s ease;
+}
+
+.skills-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.skills-table td {
+    padding: 10px 8px;
+    font-size: 12px;
+    color: #e0e0e0;
+    border-right: 1px solid rgba(255, 255, 255, 0.03);
+}
+
+.skills-table td:last-child {
+    border-right: none;
+}
+
+.skill-name {
+    font-weight: 500;
+    color: #fff;
+}
+
+.skill-element {
+    font-size: 14px;
+}
+
+.skill-type {
+    color: #aaa;
+    font-size: 11px;
+}
+
+.skill-damage {
+    font-weight: 600;
+    color: #ff6b6b;
+    text-align: right;
+}
+
+.skill-usage {
+    text-align: center;
+    color: #aaa;
+}
+
+.skill-avg {
+    text-align: right;
+    color: #ccc;
+}
+
+.skill-crit,
+.skill-lucky {
+    text-align: center;
+    font-family: monospace;
+}
+
+.skill-percent {
+    padding: 8px !important;
+}
+
+.percent-bar {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.percent-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(76, 175, 80, 0.6), rgba(76, 175, 80, 0.4));
+    transition: width 0.3s ease;
+}
+
+.percent-text {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 11px;
+    font-weight: 600;
+    color: #fff;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    z-index: 1;
+}
+
+.skills-table tfoot {
+    background: rgba(0, 0, 0, 0.4);
+    border-top: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.skills-table tfoot td {
+    padding: 12px 8px;
+    font-size: 13px;
+}
+
+.totals-row {
+    font-weight: 600;
+}
+
+.no-data {
+    text-align: center;
+    padding: 40px;
+    color: #999;
+    font-size: 14px;
+}
+
+/* Add cursor hint for double-clickable items */
+.data-item {
+    cursor: pointer;
+}
+
+.data-item:active {
+    transform: scale(0.98);
+}
+
+/* Skill-specific styling */
+.skill-item .skill-element {
+    font-size: 14px;
+    margin-right: 8px;
+}
+
+.skill-details {
+    display: flex;
+    justify-content: space-around;
+    align-items: center;
+    width: 100%;
+    padding: 4px 0;
+    font-size: 11px;
+    color: #aaa;
+}
+
+.skill-details span {
+    padding: 2px 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 3px;
+}
+
+/* Chart container */
+.chart-container {
+    padding: 16px;
+    background: rgba(0, 0, 0, 0.2);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.chart-container canvas {
+    max-height: 250px;
+}
+
+/* Data type selector dropdown */
+.data-type-selector {
+    -webkit-app-region: no-drag;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    cursor: pointer;
+    font-family: 'Roboto Condensed', sans-serif;
+    transition: background-color 0.2s ease;
+}
+
+.data-type-selector:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.data-type-selector:focus {
+    outline: none;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.data-type-selector option {
+    background: rgba(30, 30, 30, 0.95);
+    color: #fff;
+}
+
+/* Fight Details Table */
+#fightDetailsContainer {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.fight-details-controls {
+    padding: 10px;
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.fight-details-table {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 10px;
+}
+
+.stats-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #e0e0e0;
+}
+
+.stats-table thead tr {
+    display: grid;
+    grid-template-columns: 50px 1fr auto auto auto auto auto;
+    gap: 10px;
+    padding: 0 8px;
+}
+
+.stats-table thead tr.tanking-header {
+    grid-template-columns: 50px 1fr auto auto auto;
+}
+
+.stats-table thead th {
+    position: sticky;
+    top: 0;
+    background: rgba(60, 63, 65, 0.95);
+    padding: 10px 0;
+    text-align: left;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    z-index: 10;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+}
+
+.stats-table thead th:hover {
+    background: rgba(70, 73, 75, 0.95);
+}
+
+.stats-table thead th:first-child {
+    text-align: center;
+}
+
+.stats-table thead th:nth-child(3),
+.stats-table thead th:nth-child(4),
+.stats-table thead th:nth-child(5),
+.stats-table thead th:nth-child(6),
+.stats-table thead th:nth-child(7) {
+    text-align: right;
+    min-width: 70px;
+}
+
+.stats-table thead th.sortable::after {
+    content: ' ▼';
+    opacity: 0.3;
+    font-size: 8px;
+}
+
+.stats-table thead th.sorted-asc::after {
+    content: ' ▲';
+    opacity: 1;
+}
+
+.stats-table thead th.sorted-desc::after {
+    content: ' ▼';
+    opacity: 1;
+}
+
+.stats-table tbody tr {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    transition: background-color 0.2s ease;
+}
+
+.stats-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.08);
+    cursor: pointer;
+}
+
+.stats-table tbody td {
+    padding: 0;
+    font-size: 12px;
+    position: relative;
+}
+
+.stats-row-background {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    opacity: 0.3;
+    transition: width 0.3s ease;
+    pointer-events: none;
+}
+
+.stats-row-content {
+    position: relative;
+    display: grid;
+    grid-template-columns: 50px 1fr auto auto auto auto auto;
+    gap: 10px;
+    padding: 10px 8px;
+    z-index: 1;
+}
+
+.stats-row-content.tanking-row {
+    grid-template-columns: 50px 1fr auto auto auto;
+}
+
+.stats-cell {
+    display: flex;
+    align-items: center;
+}
+
+.rank-cell {
+    justify-content: center;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.5);
+}
+
+.name-cell {
+    gap: 8px;
+    min-width: 0;
+}
+
+.number-cell {
+    justify-content: flex-end;
+    font-family: 'Courier New', monospace;
+    min-width: 70px;
+}
+
+.class-icon-small {
+    width: 20px;
+    height: 20px;
+    border-radius: 3px;
+    flex-shrink: 0;
 }

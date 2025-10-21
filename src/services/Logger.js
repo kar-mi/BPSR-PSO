@@ -17,36 +17,44 @@ class Logger {
     info(message, context = {}) {
         if (this.isShuttingDown) return;
         try {
-            this.logger.info(context, message);
+            if (this.logger && !this.logger.destroyed) {
+                this.logger.info(context, message);
+            }
         } catch (err) {
-            // Suppress errors during shutdown
+            // Suppress errors during shutdown or stream closure
         }
     }
 
     error(message, context = {}) {
         if (this.isShuttingDown) return;
         try {
-            this.logger.error(context, message);
+            if (this.logger && !this.logger.destroyed) {
+                this.logger.error(context, message);
+            }
         } catch (err) {
-            // Suppress errors during shutdown
+            // Suppress errors during shutdown or stream closure
         }
     }
 
     warn(message, context = {}) {
         if (this.isShuttingDown) return;
         try {
-            this.logger.warn(context, message);
+            if (this.logger && !this.logger.destroyed) {
+                this.logger.warn(context, message);
+            }
         } catch (err) {
-            // Suppress errors during shutdown
+            // Suppress errors during shutdown or stream closure
         }
     }
 
     debug(message, context = {}) {
         if (this.isShuttingDown) return;
         try {
-            this.logger.debug(context, message);
+            if (this.logger && !this.logger.destroyed) {
+                this.logger.debug(context, message);
+            }
         } catch (err) {
-            // Suppress errors during shutdown
+            // Suppress errors during shutdown or stream closure
         }
     }
 

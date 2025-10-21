@@ -5,6 +5,7 @@ import socket from './Socket.js';
 import logger from './Logger.js';
 import fsPromises from 'fs/promises';
 import path from 'path';
+import { notifyHistoryWindowRefresh } from '../client/IpcListeners.js';
 
 class UserDataManager {
     constructor(logger) {
@@ -32,9 +33,24 @@ class UserDataManager {
         this.intervals = [];
         this.isShuttingDown = false;
 
+        // Configurable fight timeout (default 15 seconds)
+        this.fightTimeout = 15 * 1000; // milliseconds
+
+        // inactive timeout
+        this.inactiveTimeout = 120 * 1000; // milliseconds
+
         // 自动保存
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
+
+        //check every 5 seconds for timeout
+        this.intervals.push(
+            setInterval(() => {
+                if (this.isShuttingDown) return;
+                this.checkTimeoutClear();
+            }, 5 * 1000)
+        );
+
         this.intervals.push(
             setInterval(() => {
                 if (this.isShuttingDown) return;
@@ -49,7 +65,7 @@ class UserDataManager {
             setInterval(() => {
                 if (this.isShuttingDown) return;
                 this.cleanUpInactiveUsers();
-            }, 30 * 1000)
+            }, 120 * 1000)
         );
     }
 
@@ -66,21 +82,30 @@ class UserDataManager {
         }
     }
 
-    // New: Method to remove users who have not been updated in 60 seconds
+    // Method to update the fight timeout
+    setFightTimeout(timeoutMs) {
+        this.fightTimeout = timeoutMs;
+        logger.info(`Fight timeout updated to ${timeoutMs}ms (${timeoutMs / 1000}s)`);
+    }
+
+    // Get current fight timeout
+    getFightTimeout() {
+        return this.fightTimeout;
+    }
+
+    // Method to remove users who have not been updated within the fight timeout
     cleanUpInactiveUsers() {
-        const inactiveThreshold = 60 * 1000; // 1 minute
         const currentTime = Date.now();
 
         for (const [uid, user] of this.users.entries()) {
-            if (currentTime - user.lastUpdateTime > inactiveThreshold) {
+            if (currentTime - user.lastUpdateTime > this.inactiveTimeout) {
                 socket.emit('user_deleted', { uid });
 
                 this.users.delete(uid);
-                logger.info(`Removed inactive user with uid ${uid}`);
+                logger.info(`Removed inactive user with uid ${uid} (timeout: ${this.inactiveTimeout}ms)`);
             }
         }
     }
-
     async init() {
         await this.loadUserCache();
     }
@@ -162,24 +187,20 @@ class UserDataManager {
 
     addDamage(uid, skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue = 0, targetUid) {
         if (config.IS_PAUSED) return;
-        if (config.GLOBAL_SETTINGS.onlyRecordEliteDummy && targetUid !== 75) return;
-        this.checkTimeoutClear();
         const user = this.getUser(uid);
-        user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue);
+        user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue, targetUid);
     }
 
     addHealing(uid, skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid) {
         if (config.IS_PAUSED) return;
-        this.checkTimeoutClear();
         if (uid !== 0) {
             const user = this.getUser(uid);
-            user.addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky);
+            user.addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid);
         }
     }
 
     addTakenDamage(uid, damage, isDead) {
         if (config.IS_PAUSED) return;
-        this.checkTimeoutClear();
         const user = this.getUser(uid);
         user.addTakenDamage(damage, isDead);
     }
@@ -287,6 +308,18 @@ class UserDataManager {
         };
     }
 
+    getUserSkillDataByEnemy(uid, enemyId = null) {
+        const user = this.users.get(uid);
+        if (!user) return null;
+        return {
+            uid: user.uid,
+            name: user.name,
+            profession: user.profession + (user.subProfession ? `-${user.subProfession}` : ''),
+            skills: user.getSkillSummaryByEnemy(enemyId),
+            attr: user.attr,
+        };
+    }
+
     getAllUsersData() {
         const result = {};
         for (const [uid, user] of this.users.entries()) {
@@ -324,7 +357,7 @@ class UserDataManager {
         this.enemyCache.maxHp.clear();
     }
 
-    clearAll() {
+    async clearAll() {
         const usersToSave = this.users;
         const saveStartTime = this.startTime;
 
@@ -332,10 +365,13 @@ class UserDataManager {
         this.startTime = Date.now();
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
-        this.saveAllUserData(usersToSave, saveStartTime);
+        await this.saveAllUserData(usersToSave, saveStartTime);
 
         // Emit clear event to frontend
         socket.emit('data_cleared');
+
+        // Notify history window to refresh
+        notifyHistoryWindowRefresh();
     }
 
     getUserIds() {
@@ -377,6 +413,23 @@ class UserDataManager {
                 await fsPromises.mkdir(usersDir, { recursive: true });
             }
 
+            // Wait for any pending fight.log writes to complete before saving other files
+            // This prevents race conditions where JSON files are saved but fight.log is still being written
+            await this.logLock.acquire();
+            try {
+                // Ensure fight.log exists (create empty file if no logs were written)
+                const fightLogPath = path.join(logDir, 'fight.log');
+                try {
+                    await fsPromises.access(fightLogPath);
+                } catch (error) {
+                    // fight.log doesn't exist, create an empty one
+                    await fsPromises.writeFile(fightLogPath, '', 'utf8');
+                    logger.debug(`Created empty fight.log for timestamp ${timestamp}`);
+                }
+            } finally {
+                this.logLock.release();
+            }
+
             const allUserDataPath = path.join(logDir, 'allUserData.json');
             await fsPromises.writeFile(allUserDataPath, JSON.stringify(allUsersData, null, 2), 'utf8');
             for (const [uid, userData] of userDatas.entries()) {
@@ -394,9 +447,12 @@ class UserDataManager {
     checkTimeoutClear() {
         if (!config.GLOBAL_SETTINGS.autoClearOnTimeout || this.lastLogTime === 0 || this.users.size === 0) return;
         const currentTime = Date.now();
-        if (this.lastLogTime && currentTime - this.lastLogTime > 15000) {
-            this.clearAll();
-            logger.info('Timeout reached, statistics cleared!');
+        if (this.lastLogTime && currentTime - this.lastLogTime > this.fightTimeout) {
+            // Fire and forget - don't await since this is called from sync contexts
+            this.clearAll().catch((error) => {
+                logger.error('Error during timeout clear:', error);
+            });
+            logger.info(`Timeout reached (${this.fightTimeout}ms), statistics cleared!`);
         }
     }
 

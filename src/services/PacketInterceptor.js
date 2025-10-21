@@ -159,11 +159,16 @@ export class PacketInterceptor {
                 const { srcport, dstport } = tcpPacket.info;
                 const src_server = `${srcaddr}:${srcport} -> ${dstaddr}:${dstport}`;
 
+                // Skip empty TCP packets (e.g., FIN, RST, ACK without data)
+                if (buf.length === 0) {
+                    return;
+                }
+
                 await tcp_lock.acquire();
                 try {
                     if (current_server !== src_server) {
                         try {
-                            if (buf[4] == 0) {
+                            if (buf.length > 4 && buf[4] == 0) {
                                 const data = buf.subarray(10);
                                 if (data.length) {
                                     const stream = Readable.from(data, { objectMode: false });
@@ -254,8 +259,13 @@ export class PacketInterceptor {
                         if (_data.length >= packetSize) {
                             const packet = _data.subarray(0, packetSize);
                             _data = _data.subarray(packetSize);
-                            const processor = new PacketProcessor();
-                            processor.processPacket(packet);
+                            try {
+                                const processor = new PacketProcessor();
+                                processor.processPacket(packet);
+                            } catch (e) {
+                                logger.error(`Error processing packet: ${e.message}`);
+                                // Continue processing other packets even if one fails
+                            }
                         }
                     }
                 } finally {
@@ -267,7 +277,12 @@ export class PacketInterceptor {
                 while (PacketInterceptor.isRunning) {
                     if (eth_queue.length) {
                         const pkt = eth_queue.shift();
-                        await processEthPacket(pkt);
+                        try {
+                            await processEthPacket(pkt);
+                        } catch (e) {
+                            logger.error(`Error in packet processing loop: ${e.message}`);
+                            // Continue processing even if one packet fails
+                        }
                     } else {
                         await new Promise((r) => setTimeout(r, 1));
                     }

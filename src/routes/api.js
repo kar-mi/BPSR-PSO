@@ -3,6 +3,7 @@ import path from 'path';
 import logger from '../services/Logger.js';
 import { promises as fsPromises } from 'fs';
 import userDataManager from '../services/UserDataManager.js';
+import { reloadSkillConfig } from '../models/UserData.js';
 
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
@@ -28,6 +29,42 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         res.json(data);
     });
 
+    // POST update fight timeout
+    router.post('/fight/timeout', (req, res) => {
+        try {
+            const { timeout } = req.body;
+
+            if (typeof timeout !== 'number' || timeout <= 0) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid timeout value. Must be a positive number in milliseconds.',
+                });
+            }
+
+            userDataManager.setFightTimeout(timeout);
+
+            res.json({
+                code: 0,
+                msg: 'Fight timeout updated successfully',
+                timeout: timeout,
+            });
+        } catch (error) {
+            logger.error('Error updating fight timeout:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to update fight timeout',
+            });
+        }
+    });
+
+    // GET current fight timeout
+    router.get('/fight/timeout', (req, res) => {
+        res.json({
+            code: 0,
+            timeout: userDataManager.getFightTimeout(),
+        });
+    });
+
     // GET all enemy data
     router.get('/enemies', (req, res) => {
         const enemiesData = userDataManager.getAllEnemiesData();
@@ -39,13 +76,30 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     });
 
     // Clear all statistics
-    router.get('/clear', (req, res) => {
-        userDataManager.clearAll();
+    router.get('/clear', async (req, res) => {
+        await userDataManager.clearAll();
         logger.info('Statistics have been cleared!');
         res.json({
             code: 0,
             msg: 'Statistics have been cleared!',
         });
+    });
+
+    // Reload skill names configuration
+    router.post('/reload-skills', (req, res) => {
+        logger.info('Reloading skill names configuration...');
+        const success = reloadSkillConfig();
+        if (success) {
+            res.json({
+                code: 0,
+                msg: 'Skill names reloaded successfully',
+            });
+        } else {
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to reload skill names. Check server logs for details.',
+            });
+        }
     });
 
     // Pause/Resume statistics
@@ -71,7 +125,12 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get skill data for a specific user ID
     router.get('/skill/:uid', (req, res) => {
         const uid = parseInt(req.params.uid);
-        const skillData = userDataManager.getUserSkillData(uid);
+        const enemyId = req.query.enemy ? parseInt(req.query.enemy) : null;
+
+        const skillData =
+            enemyId !== null
+                ? userDataManager.getUserSkillDataByEnemy(uid, enemyId)
+                : userDataManager.getUserSkillData(uid);
 
         if (!skillData) {
             return res.status(404).json({
@@ -147,11 +206,90 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get history skill data for a specific timestamp and user
     router.get('/history/:timestamp/skill/:uid', async (req, res) => {
         const { timestamp, uid } = req.params;
+        const { enemy } = req.query; // Optional enemy filter
         const historyFilePath = path.join('./logs', timestamp, 'users', `${uid}.json`);
 
         try {
             const data = await fsPromises.readFile(historyFilePath, 'utf8');
-            const skillData = JSON.parse(data);
+            let skillData = JSON.parse(data);
+
+            // If enemy filter is specified, calculate per-enemy skill stats from fight.log
+            if (enemy && enemy !== 'all') {
+                const logFilePath = path.join('./logs', timestamp, 'fight.log');
+                const logContent = await fsPromises.readFile(logFilePath, 'utf8');
+                const lines = logContent.split('\n');
+
+                // Groups: 1:Timestamp, 2:DMG|HEAL, 3:Source Name, 4:Source UID, 5:Target Name, 6:Target Role, 7:Skill ID, 8:Value, 9:EXT value
+                const logRegex =
+                    /\[([^\]]+)\] \[(DMG|HEAL)\] DS: \w+ SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#\d+\((enemy|player)\).*ID: (\d+).*VAL: (\d+).*EXT: (\w+)/;
+
+                // Track per-skill stats for the specific enemy
+                const skillStatsPerEnemy = {};
+
+                for (const line of lines) {
+                    const match = line.match(logRegex);
+                    if (match) {
+                        const type = match[2]; // DMG or HEAL
+                        const playerUid = match[4];
+                        const targetName = match[5];
+                        const targetType = match[6]; // enemy or player
+                        const skillId = match[7];
+                        const value = parseInt(match[8]);
+                        const ext = match[9]; // EXT value (e.g., 'Lucky', 'CauseLucky', 'Crit', 'Normal')
+
+                        // --- MODIFIED CRIT/LUCKY CHECK ---
+                        // Check the EXT value for 'Crit' or 'Lucky'/'CauseLucky'
+                        const isCrit = ext.includes('Crit');
+                        // Check for 'Lucky' or 'CauseLucky' as both indicate a lucky hit
+                        const isLucky = ext.includes('Lucky');
+
+                        // Only count events from this player against the specified enemy
+                        if (playerUid === uid && targetType === 'enemy' && targetName === enemy) {
+                            if (!skillStatsPerEnemy[skillId]) {
+                                skillStatsPerEnemy[skillId] = {
+                                    totalDamage: 0,
+                                    totalCount: 0,
+                                    critCount: 0,
+                                    luckyCount: 0,
+                                    type: type === 'DMG' ? '伤害' : '治疗',
+                                };
+                            }
+
+                            skillStatsPerEnemy[skillId].totalDamage += value;
+                            skillStatsPerEnemy[skillId].totalCount += 1;
+                            if (isCrit) skillStatsPerEnemy[skillId].critCount += 1;
+                            if (isLucky) skillStatsPerEnemy[skillId].luckyCount += 1;
+                        }
+                    }
+                }
+
+                // Create new skills object with per-enemy stats
+                const filteredSkills = {};
+                for (const [skillId, stats] of Object.entries(skillStatsPerEnemy)) {
+                    // Get original skill info for display name and element
+                    const originalSkill = skillData.skills?.[skillId];
+
+                    filteredSkills[skillId] = {
+                        displayName: originalSkill?.displayName || skillId,
+                        type: stats.type,
+                        elementype: originalSkill?.elementype || '',
+                        totalDamage: stats.totalDamage,
+                        totalCount: stats.totalCount,
+                        critCount: stats.critCount,
+                        luckyCount: stats.luckyCount,
+                        critRate: stats.totalCount > 0 ? stats.critCount / stats.totalCount : 0,
+                        luckyRate: stats.totalCount > 0 ? stats.luckyCount / stats.totalCount : 0,
+                        damageBreakdown: { total: stats.totalDamage },
+                        countBreakdown: { total: stats.totalCount, critical: stats.critCount, lucky: stats.luckyCount },
+                    };
+                }
+
+                skillData = {
+                    ...skillData,
+                    skills: filteredSkills,
+                };
+            }
+
             res.json({
                 code: 0,
                 data: skillData,
@@ -248,6 +386,16 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             const fights = [];
             for (const timestamp of logDirs) {
                 try {
+                    // Check if fight.log exists before including this fight
+                    const fightLogPath = path.join('./logs', timestamp.toString(), 'fight.log');
+                    try {
+                        await fsPromises.access(fightLogPath);
+                    } catch (error) {
+                        // fight.log doesn't exist, skip this fight
+                        logger.warn(`Skipping fight ${timestamp}: fight.log not found`);
+                        continue;
+                    }
+
                     const userDataPath = path.join('./logs', timestamp.toString(), 'allUserData.json');
                     const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
 
@@ -344,16 +492,87 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     router.get('/fight/:fightId', async (req, res) => {
         try {
             const { fightId } = req.params;
+            const { enemy } = req.query; // Optional enemy filter
             const timestamp = fightId.replace('fight_', '');
 
             const userDataPath = path.join('./logs', timestamp, 'allUserData.json');
             const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
 
+            let processedUserData = userData;
+
+            // If enemy filter is specified, calculate per-enemy stats from fight.log
+            if (enemy && enemy !== 'all') {
+                const logFilePath = path.join('./logs', timestamp, 'fight.log');
+                const logContent = await fsPromises.readFile(logFilePath, 'utf8');
+                const lines = logContent.split('\n');
+
+                // Regex to parse log lines
+                const logRegex =
+                    /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+
+                // Track per-user stats for the specific enemy
+                const userStatsPerEnemy = {};
+
+                for (const line of lines) {
+                    const match = line.match(logRegex);
+                    if (match) {
+                        const type = match[2]; // DMG or HEAL
+                        const playerUid = match[4];
+                        const targetName = match[5];
+                        const targetType = match[7];
+                        const value = parseInt(match[8]);
+
+                        // Only count events against the specified enemy
+                        if (targetType === 'enemy' && targetName === enemy) {
+                            if (!userStatsPerEnemy[playerUid]) {
+                                userStatsPerEnemy[playerUid] = {
+                                    total_damage: 0,
+                                    total_healing: 0,
+                                    damage_count: 0,
+                                    healing_count: 0,
+                                };
+                            }
+
+                            if (type === 'DMG') {
+                                userStatsPerEnemy[playerUid].total_damage += value;
+                                userStatsPerEnemy[playerUid].damage_count += 1;
+                            } else if (type === 'HEAL') {
+                                userStatsPerEnemy[playerUid].total_healing += value;
+                                userStatsPerEnemy[playerUid].healing_count += 1;
+                            }
+                        }
+                    }
+                }
+
+                // Create new user data with per-enemy stats
+                processedUserData = {};
+                for (const [uid, user] of Object.entries(userData)) {
+                    const enemyStats = userStatsPerEnemy[uid];
+                    if (enemyStats) {
+                        processedUserData[uid] = {
+                            ...user,
+                            total_damage: {
+                                ...user.total_damage,
+                                total: enemyStats.total_damage,
+                            },
+                            total_healing: {
+                                ...user.total_healing,
+                                total: enemyStats.total_healing,
+                            },
+                            total_count: {
+                                ...user.total_count,
+                                total: enemyStats.damage_count + enemyStats.healing_count,
+                            },
+                        };
+                    }
+                }
+            }
+
             // Calculate totals
             let totalDamage = 0;
             let totalHealing = 0;
 
-            for (const [uid, user] of Object.entries(userData)) {
+            for (const [uid, user] of Object.entries(processedUserData)) {
                 totalDamage += user.total_damage?.total || 0;
                 totalHealing += user.total_healing?.total || 0;
             }
@@ -367,7 +586,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     duration: 0,
                     totalDamage,
                     totalHealing,
-                    userStats: userData,
+                    userStats: processedUserData,
                 },
             });
         } catch (error) {
@@ -382,6 +601,205 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 res.status(500).json({
                     code: 1,
                     msg: 'Failed to read fight data',
+                });
+            }
+        }
+    });
+
+    // Get list of enemies from a specific fight
+    router.get('/fight/:fightId/enemies', async (req, res) => {
+        try {
+            const { fightId } = req.params;
+            const timestamp = fightId.replace('fight_', '');
+            const logFilePath = path.join('./logs', timestamp, 'fight.log');
+
+            // Read the log file
+            const logContent = await fsPromises.readFile(logFilePath, 'utf8');
+            const lines = logContent.split('\n');
+
+            // Regex to parse log lines with target information
+            const logRegex =
+                /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+
+            const enemies = new Set();
+            const userEnemyMap = {}; // Map of uid -> Set of enemy names
+
+            // Parse each line to extract enemy names and user-enemy relationships
+            for (const line of lines) {
+                const match = line.match(logRegex);
+                if (match) {
+                    const playerUid = match[4];
+                    const targetType = match[7];
+                    const targetName = match[5];
+
+                    if (targetType === 'enemy') {
+                        enemies.add(targetName);
+
+                        // Track which users damaged which enemies
+                        if (!userEnemyMap[playerUid]) {
+                            userEnemyMap[playerUid] = [];
+                        }
+                        if (!userEnemyMap[playerUid].includes(targetName)) {
+                            userEnemyMap[playerUid].push(targetName);
+                        }
+                    }
+                }
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    enemies: Array.from(enemies),
+                    userEnemyMap: userEnemyMap,
+                },
+            });
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                logger.warn('Fight log file not found:', error);
+                res.status(404).json({
+                    code: 1,
+                    msg: 'Fight log not found',
+                });
+            } else {
+                logger.error('Failed to read fight log:', error);
+                res.status(500).json({
+                    code: 1,
+                    msg: 'Failed to read fight log',
+                });
+            }
+        }
+    });
+
+    // Get time-series data for a user from fight.log
+    router.get('/history/:timestamp/timeseries/:uid', async (req, res) => {
+        try {
+            const { timestamp, uid } = req.params;
+            const { enemy } = req.query; // Optional enemy filter
+            const logFilePath = path.join('./logs', timestamp, 'fight.log');
+
+            // Read the log file
+            const logContent = await fsPromises.readFile(logFilePath, 'utf8');
+            const lines = logContent.split('\n');
+
+            // Regex to parse log lines with target information
+            const logRegex =
+                /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+
+            let firstTimestamp = null;
+            let lastTimestamp = null;
+            const enemies = new Set(); // Track all enemies encountered
+
+            // First pass: collect all events for this user
+            const userEvents = [];
+            for (const line of lines) {
+                const match = line.match(logRegex);
+                if (match) {
+                    const [, timestamp, type, playerName, playerId, targetName, targetId, targetType, value] = match;
+
+                    if (playerId === uid) {
+                        // Track enemy names for the dropdown
+                        if (targetType === 'enemy') {
+                            enemies.add(targetName);
+                        }
+
+                        // If enemy filter is specified, only include matching events
+                        if (enemy && enemy !== 'all' && targetName !== enemy) {
+                            continue;
+                        }
+
+                        const time = new Date(timestamp).getTime();
+                        userEvents.push({
+                            time,
+                            type,
+                            value: parseInt(value, 10),
+                            target: targetName,
+                            targetType,
+                        });
+
+                        if (firstTimestamp === null || time < firstTimestamp) {
+                            firstTimestamp = time;
+                        }
+                        if (lastTimestamp === null || time > lastTimestamp) {
+                            lastTimestamp = time;
+                        }
+                    }
+                }
+            }
+
+            // If no events found, return empty arrays
+            if (userEvents.length === 0 || firstTimestamp === null) {
+                res.json({
+                    code: 0,
+                    data: {
+                        damage: [],
+                        healing: [],
+                    },
+                });
+                return;
+            }
+
+            // Calculate duration and create 1-second buckets
+            const duration = lastTimestamp - firstTimestamp;
+            const bucketSize = 1000; // 1 second in milliseconds
+            const numBuckets = Math.ceil(duration / bucketSize) + 1;
+
+            const damageBuckets = new Array(numBuckets).fill(0);
+            const healingBuckets = new Array(numBuckets).fill(0);
+
+            // Aggregate events into buckets
+            for (const event of userEvents) {
+                const bucketIndex = Math.floor((event.time - firstTimestamp) / bucketSize);
+                if (bucketIndex >= 0 && bucketIndex < numBuckets) {
+                    if (event.type === 'DMG') {
+                        damageBuckets[bucketIndex] += event.value;
+                    } else if (event.type === 'HEAL') {
+                        healingBuckets[bucketIndex] += event.value;
+                    }
+                }
+            }
+
+            // Convert buckets to time-series format
+            const damageTimeSeries = [];
+            const healingTimeSeries = [];
+
+            for (let i = 0; i < numBuckets; i++) {
+                const time = firstTimestamp + i * bucketSize;
+
+                if (damageBuckets[i] > 0) {
+                    damageTimeSeries.push({
+                        time: time,
+                        value: damageBuckets[i],
+                    });
+                }
+
+                if (healingBuckets[i] > 0) {
+                    healingTimeSeries.push({
+                        time: time,
+                        value: healingBuckets[i],
+                    });
+                }
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    damage: damageTimeSeries,
+                    healing: healingTimeSeries,
+                    enemies: Array.from(enemies),
+                },
+            });
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                logger.warn('Fight log file not found:', error);
+                res.status(404).json({
+                    code: 1,
+                    msg: 'Fight log not found',
+                });
+            } else {
+                logger.error('Failed to read fight log:', error);
+                res.status(500).json({
+                    code: 1,
+                    msg: 'Failed to read fight log',
                 });
             }
         }
