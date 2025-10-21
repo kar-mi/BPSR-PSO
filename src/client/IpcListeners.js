@@ -9,8 +9,10 @@ const __dirname = path.dirname(__filename);
 const iconPath = path.join(__dirname, '../resources/app.ico');
 const preloadPath = path.join(__dirname, '../preload.js');
 const historyHtmlPath = path.join(__dirname, '../public/history.html');
+const skillsHtmlPath = path.join(__dirname, '../public/skills.html');
 
 let historyWindow = null;
+let skillWindows = {}; // Store multiple skill windows by UID
 
 ipcMain.on('close-client', (event) => {
     app.quit();
@@ -66,5 +68,55 @@ ipcMain.on('open-history-window', async (event) => {
 
     historyWindow.on('closed', () => {
         historyWindow = null;
+    });
+});
+
+ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId }) => {
+    // Check if window for this UID already exists
+    if (skillWindows[uid] && !skillWindows[uid].isDestroyed()) {
+        skillWindows[uid].focus();
+        return;
+    }
+
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+
+    skillWindows[uid] = new BrowserWindow({
+        width: 600,
+        height: 700,
+        minWidth: 400,
+        minHeight: 300,
+        transparent: true,
+        frame: false,
+        title: `Extra Details - ${name}`,
+        icon: iconPath,
+        webPreferences: {
+            preload: preloadPath,
+            contextIsolation: true,
+            nodeIntegration: false,
+        },
+        autoMenuBar: false,
+        parent: mainWindow,
+        modal: false,
+    });
+
+    skillWindows[uid].setAlwaysOnTop(true, 'normal');
+    skillWindows[uid].setMovable(true);
+
+    // Build URL with query parameters
+    const params = new URLSearchParams({
+        uid: uid,
+        name: name || 'Unknown',
+        profession: profession || 'Unknown',
+    });
+
+    if (fightId) {
+        params.append('fightId', fightId);
+    }
+
+    const url = `${skillsHtmlPath}?${params.toString()}`;
+    skillWindows[uid].loadFile(skillsHtmlPath, { query: Object.fromEntries(params) });
+
+    skillWindows[uid].on('closed', () => {
+        delete skillWindows[uid];
     });
 });

@@ -195,7 +195,9 @@ function processDataUpdate(data) {
 async function clearData() {
     try {
         const currentStatus = getServerStatus();
-        showServerStatus('cleared');
+
+        // Show status that we're saving the current encounter
+        showServerStatus('saving');
 
         const response = await fetch(`http://${SERVER_URL}/api/clear`);
         const result = await response.json();
@@ -205,14 +207,17 @@ async function clearData() {
             userColors = {};
             updateAll();
             showServerStatus('cleared');
-            console.log('Data cleared successfully.');
+            console.log('Encounter saved and cleared. New encounter started.');
         } else {
             console.error('Failed to clear data on server:', result.msg);
+            showServerStatus('error');
         }
 
-        setTimeout(() => showServerStatus(currentStatus), 1000);
+        setTimeout(() => showServerStatus(currentStatus), 2000);
     } catch (error) {
         console.error('Error sending clear request to server:', error);
+        showServerStatus('error');
+        setTimeout(() => showServerStatus('disconnected'), 2000);
     }
 }
 
@@ -372,6 +377,29 @@ function setBackgroundOpacity(value) {
 function updateTimeoutValue() {
     console.log('Updating timeout display to:', timeoutSlider.value);
     timeoutValue.textContent = timeoutSlider.value;
+}
+
+async function loadInitialTimeout() {
+    try {
+        const response = await fetch(`http://${SERVER_URL}/api/fight/timeout`);
+        if (response.ok) {
+            const result = await response.json();
+            if (result.code === 0) {
+                const timeoutSeconds = result.timeout / 1000; // Convert from ms to seconds
+                timeoutSlider.value = timeoutSeconds;
+                updateTimeoutValue();
+                console.log(`Loaded initial timeout: ${timeoutSeconds}s`);
+            }
+        } else {
+            console.error('Failed to load initial timeout:', response.status);
+            // Use default value if server fails
+            updateTimeoutValue();
+        }
+    } catch (error) {
+        console.error('Error loading initial timeout:', error);
+        // Use default value if request fails
+        updateTimeoutValue();
+    }
 }
 
 async function updateFightTimeout(seconds) {
@@ -632,7 +660,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // Initialize timeout slider
     console.log('Timeout slider element:', timeoutSlider);
     console.log('Timeout value element:', timeoutValue);
-    updateTimeoutValue();
+
+    // Load initial timeout from server
+    loadInitialTimeout();
+
     timeoutSlider.addEventListener('input', (event) => {
         console.log('Timeout slider changed to:', event.target.value);
         updateTimeoutValue();

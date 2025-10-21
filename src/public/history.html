@@ -49,6 +49,16 @@
                         <button id="closeButton" onclick="window.close()" title="Close Window">X</button>
                     </div>
                 </div>
+                <div id="fightDetailsContainer" class="hidden">
+                    <div class="fight-details-controls">
+                        <select id="dataTypeFilter" class="data-type-selector">
+                            <option value="damage">Damage</option>
+                            <option value="healing">Healing</option>
+                            <option value="tanking">Tanking</option>
+                        </select>
+                    </div>
+                    <div id="fightDetailsTable" class="fight-details-table"></div>
+                </div>
                 <div id="columnsContainer" class="columns-container hidden"></div>
                 <div id="historyContainer" class="history-container">
                     <div id="historyContent" class="history-content">

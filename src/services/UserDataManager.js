@@ -32,6 +32,9 @@ class UserDataManager {
         this.intervals = [];
         this.isShuttingDown = false;
 
+        // Configurable fight timeout (default 15 seconds)
+        this.fightTimeout = 15 * 1000; // milliseconds
+
         // 自动保存
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
@@ -66,17 +69,27 @@ class UserDataManager {
         }
     }
 
-    // New: Method to remove users who have not been updated in 60 seconds
+    // Method to update the fight timeout
+    setFightTimeout(timeoutMs) {
+        this.fightTimeout = timeoutMs;
+        logger.info(`Fight timeout updated to ${timeoutMs}ms (${timeoutMs / 1000}s)`);
+    }
+
+    // Get current fight timeout
+    getFightTimeout() {
+        return this.fightTimeout;
+    }
+
+    // Method to remove users who have not been updated within the fight timeout
     cleanUpInactiveUsers() {
-        const inactiveThreshold = 60 * 1000; // 1 minute
         const currentTime = Date.now();
 
         for (const [uid, user] of this.users.entries()) {
-            if (currentTime - user.lastUpdateTime > inactiveThreshold) {
+            if (currentTime - user.lastUpdateTime > this.fightTimeout) {
                 socket.emit('user_deleted', { uid });
 
                 this.users.delete(uid);
-                logger.info(`Removed inactive user with uid ${uid}`);
+                logger.info(`Removed inactive user with uid ${uid} (timeout: ${this.fightTimeout}ms)`);
             }
         }
     }

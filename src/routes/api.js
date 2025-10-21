@@ -28,6 +28,42 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         res.json(data);
     });
 
+    // POST update fight timeout
+    router.post('/fight/timeout', (req, res) => {
+        try {
+            const { timeout } = req.body;
+
+            if (typeof timeout !== 'number' || timeout <= 0) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid timeout value. Must be a positive number in milliseconds.',
+                });
+            }
+
+            userDataManager.setFightTimeout(timeout);
+
+            res.json({
+                code: 0,
+                msg: 'Fight timeout updated successfully',
+                timeout: timeout,
+            });
+        } catch (error) {
+            logger.error('Error updating fight timeout:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to update fight timeout',
+            });
+        }
+    });
+
+    // GET current fight timeout
+    router.get('/fight/timeout', (req, res) => {
+        res.json({
+            code: 0,
+            timeout: userDataManager.getFightTimeout(),
+        });
+    });
+
     // GET all enemy data
     router.get('/enemies', (req, res) => {
         const enemiesData = userDataManager.getAllEnemiesData();
@@ -382,6 +418,141 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 res.status(500).json({
                     code: 1,
                     msg: 'Failed to read fight data',
+                });
+            }
+        }
+    });
+
+    // Get time-series data for a user from fight.log
+    router.get('/history/:timestamp/timeseries/:uid', async (req, res) => {
+        try {
+            const { timestamp, uid } = req.params;
+            const { enemy } = req.query; // Optional enemy filter
+            const logFilePath = path.join('./logs', timestamp, 'fight.log');
+
+            // Read the log file
+            const logContent = await fsPromises.readFile(logFilePath, 'utf8');
+            const lines = logContent.split('\n');
+
+            // Regex to parse log lines with target information
+            const logRegex =
+                /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+
+            let firstTimestamp = null;
+            let lastTimestamp = null;
+            const enemies = new Set(); // Track all enemies encountered
+
+            // First pass: collect all events for this user
+            const userEvents = [];
+            for (const line of lines) {
+                const match = line.match(logRegex);
+                if (match) {
+                    const [, timestamp, type, playerName, playerId, targetName, targetId, targetType, value] = match;
+
+                    if (playerId === uid) {
+                        // Track enemy names for the dropdown
+                        if (targetType === 'enemy') {
+                            enemies.add(targetName);
+                        }
+
+                        // If enemy filter is specified, only include matching events
+                        if (enemy && enemy !== 'all' && targetName !== enemy) {
+                            continue;
+                        }
+
+                        const time = new Date(timestamp).getTime();
+                        userEvents.push({
+                            time,
+                            type,
+                            value: parseInt(value, 10),
+                            target: targetName,
+                            targetType,
+                        });
+
+                        if (firstTimestamp === null || time < firstTimestamp) {
+                            firstTimestamp = time;
+                        }
+                        if (lastTimestamp === null || time > lastTimestamp) {
+                            lastTimestamp = time;
+                        }
+                    }
+                }
+            }
+
+            // If no events found, return empty arrays
+            if (userEvents.length === 0 || firstTimestamp === null) {
+                res.json({
+                    code: 0,
+                    data: {
+                        damage: [],
+                        healing: [],
+                    },
+                });
+                return;
+            }
+
+            // Calculate duration and create 1-second buckets
+            const duration = lastTimestamp - firstTimestamp;
+            const bucketSize = 1000; // 1 second in milliseconds
+            const numBuckets = Math.ceil(duration / bucketSize) + 1;
+
+            const damageBuckets = new Array(numBuckets).fill(0);
+            const healingBuckets = new Array(numBuckets).fill(0);
+
+            // Aggregate events into buckets
+            for (const event of userEvents) {
+                const bucketIndex = Math.floor((event.time - firstTimestamp) / bucketSize);
+                if (bucketIndex >= 0 && bucketIndex < numBuckets) {
+                    if (event.type === 'DMG') {
+                        damageBuckets[bucketIndex] += event.value;
+                    } else if (event.type === 'HEAL') {
+                        healingBuckets[bucketIndex] += event.value;
+                    }
+                }
+            }
+
+            // Convert buckets to time-series format
+            const damageTimeSeries = [];
+            const healingTimeSeries = [];
+
+            for (let i = 0; i < numBuckets; i++) {
+                const time = firstTimestamp + i * bucketSize;
+
+                if (damageBuckets[i] > 0) {
+                    damageTimeSeries.push({
+                        time: time,
+                        value: damageBuckets[i],
+                    });
+                }
+
+                if (healingBuckets[i] > 0) {
+                    healingTimeSeries.push({
+                        time: time,
+                        value: healingBuckets[i],
+                    });
+                }
+            }
+
+            res.json({
+                code: 0,
+                data: {
+                    damage: damageTimeSeries,
+                    healing: healingTimeSeries,
+                    enemies: Array.from(enemies),
+                },
+            });
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                logger.warn('Fight log file not found:', error);
+                res.status(404).json({
+                    code: 1,
+                    msg: 'Fight log not found',
+                });
+            } else {
+                logger.error('Failed to read fight log:', error);
+                res.status(500).json({
+                    code: 1,
+                    msg: 'Failed to read fight log',
                 });
             }
         }

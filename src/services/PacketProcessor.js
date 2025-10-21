@@ -115,27 +115,27 @@ const getProfessionNameFromId = (professionId) => {
 const getDamageElement = (damageProperty) => {
     switch (damageProperty) {
         case EDamageProperty.General:
-            return '⚔️物';
+            return '⚔️ Basic';
         case EDamageProperty.Fire:
-            return '🔥火';
+            return '🔥 Fire';
         case EDamageProperty.Water:
-            return '❄️冰';
+            return '❄️ Water';
         case EDamageProperty.Electricity:
-            return '⚡雷';
+            return '⚡Static';
         case EDamageProperty.Wood:
-            return '🍀森';
+            return '🍀Wood';
         case EDamageProperty.Wind:
-            return '💨风';
+            return '💨 Wind';
         case EDamageProperty.Rock:
-            return '⛰️岩';
+            return '⛰️ Earth';
         case EDamageProperty.Light:
-            return '🌟光';
+            return '🌟 Light';
         case EDamageProperty.Dark:
-            return '🌑暗';
+            return '🌑 Dark';
         case EDamageProperty.Count:
-            return '❓？'; // 未知
+            return '❓'; // 未知
         default:
-            return '⚔️物';
+            return '⚔️ Basic';
     }
 };
 

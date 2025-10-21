@@ -16,4 +16,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Window management
     openHistoryWindow: () => ipcRenderer.send('open-history-window'),
+    openSkillsWindow: (data) => ipcRenderer.send('open-skills-window', data),
 });
