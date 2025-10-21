@@ -106,3 +106,9 @@ https://github.com/Chase-Simmons/BPSR-PSO/pull/23/files
 https://github.com/Chase-Simmons/BPSR-PSO/pull/20/files
 https://github.com/Chase-Simmons/BPSR-PSO/pull/18/files
 ```
+
+```
+Translations
+```
+
+https://github.com/Zaarrg/BlueProtocolStarResonanceDataAnalysis/tree/master/Data/ProcessedGameData/StarResonanceDps_Data
