@@ -127,9 +127,10 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         const uid = parseInt(req.params.uid);
         const enemyId = req.query.enemy ? parseInt(req.query.enemy) : null;
 
-        const skillData = enemyId !== null
-            ? userDataManager.getUserSkillDataByEnemy(uid, enemyId)
-            : userDataManager.getUserSkillData(uid);
+        const skillData =
+            enemyId !== null
+                ? userDataManager.getUserSkillDataByEnemy(uid, enemyId)
+                : userDataManager.getUserSkillData(uid);
 
         if (!skillData) {
             return res.status(404).json({
@@ -218,9 +219,9 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 const logContent = await fsPromises.readFile(logFilePath, 'utf8');
                 const lines = logContent.split('\n');
 
-                // Regex to parse log lines with skill information
+                // Groups: 1:Timestamp, 2:DMG|HEAL, 3:Source Name, 4:Source UID, 5:Target Name, 6:Target Role, 7:Skill ID, 8:Value, 9:EXT value
                 const logRegex =
-                    /\[([^\]]+)\] \[(DMG|HEAL)\] SKILL: (\d+).*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+).*CRIT: (\w+).*LUCKY: (\w+)/;
+                    /\[([^\]]+)\] \[(DMG|HEAL)\] DS: \w+ SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#\d+\((enemy|player)\).*ID: (\d+).*VAL: (\d+).*EXT: (\w+)/;
 
                 // Track per-skill stats for the specific enemy
                 const skillStatsPerEnemy = {};
@@ -229,13 +230,18 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     const match = line.match(logRegex);
                     if (match) {
                         const type = match[2]; // DMG or HEAL
-                        const skillId = match[3];
-                        const playerUid = match[5];
-                        const targetName = match[6];
-                        const targetType = match[8];
-                        const value = parseInt(match[9]);
-                        const isCrit = match[10] === 'true';
-                        const isLucky = match[11] === 'true';
+                        const playerUid = match[4];
+                        const targetName = match[5];
+                        const targetType = match[6]; // enemy or player
+                        const skillId = match[7];
+                        const value = parseInt(match[8]);
+                        const ext = match[9]; // EXT value (e.g., 'Lucky', 'CauseLucky', 'Crit', 'Normal')
+
+                        // --- MODIFIED CRIT/LUCKY CHECK ---
+                        // Check the EXT value for 'Crit' or 'Lucky'/'CauseLucky'
+                        const isCrit = ext.includes('Crit');
+                        // Check for 'Lucky' or 'CauseLucky' as both indicate a lucky hit
+                        const isLucky = ext.includes('Lucky');
 
                         // Only count events from this player against the specified enemy
                         if (playerUid === uid && targetType === 'enemy' && targetName === enemy) {
