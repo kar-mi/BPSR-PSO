@@ -205,11 +205,85 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get history skill data for a specific timestamp and user
     router.get('/history/:timestamp/skill/:uid', async (req, res) => {
         const { timestamp, uid } = req.params;
+        const { enemy } = req.query; // Optional enemy filter
         const historyFilePath = path.join('./logs', timestamp, 'users', `${uid}.json`);
 
         try {
             const data = await fsPromises.readFile(historyFilePath, 'utf8');
-            const skillData = JSON.parse(data);
+            let skillData = JSON.parse(data);
+
+            // If enemy filter is specified, calculate per-enemy skill stats from fight.log
+            if (enemy && enemy !== 'all') {
+                const logFilePath = path.join('./logs', timestamp, 'fight.log');
+                const logContent = await fsPromises.readFile(logFilePath, 'utf8');
+                const lines = logContent.split('\n');
+
+                // Regex to parse log lines with skill information
+                const logRegex =
+                    /\[([^\]]+)\] \[(DMG|HEAL)\] SKILL: (\d+).*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+).*CRIT: (\w+).*LUCKY: (\w+)/;
+
+                // Track per-skill stats for the specific enemy
+                const skillStatsPerEnemy = {};
+
+                for (const line of lines) {
+                    const match = line.match(logRegex);
+                    if (match) {
+                        const type = match[2]; // DMG or HEAL
+                        const skillId = match[3];
+                        const playerUid = match[5];
+                        const targetName = match[6];
+                        const targetType = match[8];
+                        const value = parseInt(match[9]);
+                        const isCrit = match[10] === 'true';
+                        const isLucky = match[11] === 'true';
+
+                        // Only count events from this player against the specified enemy
+                        if (playerUid === uid && targetType === 'enemy' && targetName === enemy) {
+                            if (!skillStatsPerEnemy[skillId]) {
+                                skillStatsPerEnemy[skillId] = {
+                                    totalDamage: 0,
+                                    totalCount: 0,
+                                    critCount: 0,
+                                    luckyCount: 0,
+                                    type: type === 'DMG' ? '伤害' : '治疗',
+                                };
+                            }
+
+                            skillStatsPerEnemy[skillId].totalDamage += value;
+                            skillStatsPerEnemy[skillId].totalCount += 1;
+                            if (isCrit) skillStatsPerEnemy[skillId].critCount += 1;
+                            if (isLucky) skillStatsPerEnemy[skillId].luckyCount += 1;
+                        }
+                    }
+                }
+
+                // Create new skills object with per-enemy stats
+                const filteredSkills = {};
+                for (const [skillId, stats] of Object.entries(skillStatsPerEnemy)) {
+                    // Get original skill info for display name and element
+                    const originalSkill = skillData.skills?.[skillId];
+
+                    filteredSkills[skillId] = {
+                        displayName: originalSkill?.displayName || skillId,
+                        type: stats.type,
+                        elementype: originalSkill?.elementype || '',
+                        totalDamage: stats.totalDamage,
+                        totalCount: stats.totalCount,
+                        critCount: stats.critCount,
+                        luckyCount: stats.luckyCount,
+                        critRate: stats.totalCount > 0 ? stats.critCount / stats.totalCount : 0,
+                        luckyRate: stats.totalCount > 0 ? stats.luckyCount / stats.totalCount : 0,
+                        damageBreakdown: { total: stats.totalDamage },
+                        countBreakdown: { total: stats.totalCount, critical: stats.critCount, lucky: stats.luckyCount },
+                    };
+                }
+
+                skillData = {
+                    ...skillData,
+                    skills: filteredSkills,
+                };
+            }
+
             res.json({
                 code: 0,
                 data: skillData,

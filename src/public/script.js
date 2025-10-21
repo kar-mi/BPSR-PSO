@@ -1,4 +1,10 @@
-import { SERVER_URL, getNextColorShades, formatNumber, getProfessionIconHtml, initializeOpacitySlider } from './utils.js';
+import {
+    SERVER_URL,
+    getNextColorShades,
+    formatNumber,
+    getProfessionIconHtml,
+    initializeOpacitySlider,
+} from './utils.js';
 
 // DOM elements - will be initialized after DOMContentLoaded
 let columnsContainer, settingsContainer, helpContainer, passthroughTitle;

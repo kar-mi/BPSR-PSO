@@ -40,6 +40,7 @@ function openSkillBreakdown(uid, userName, userProfession) {
             name: userName || 'Unknown',
             profession: userProfession || 'Unknown',
             fightId: currentFightId || null,
+            enemy: currentEnemy !== 'all' ? currentEnemy : null,
         });
     } else {
         // Fallback for non-Electron environments (development)
@@ -51,6 +52,10 @@ function openSkillBreakdown(uid, userName, userProfession) {
 
         if (currentFightId) {
             params.append('fightId', currentFightId);
+        }
+
+        if (currentEnemy && currentEnemy !== 'all') {
+            params.append('enemy', currentEnemy);
         }
 
         const url = `skills.html?${params.toString()}`;

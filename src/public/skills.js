@@ -13,6 +13,7 @@ const uid = urlParams.get('uid');
 const fightId = urlParams.get('fightId');
 const userName = urlParams.get('name');
 const userProfession = urlParams.get('profession');
+const initialEnemy = urlParams.get('enemy'); // Enemy filter from fight history
 
 // DOM elements
 const columnsContainer = document.getElementById('columnsContainer');
@@ -21,6 +22,11 @@ const enemySelector = document.getElementById('enemySelector');
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    // Set initial enemy filter from URL parameter
+    if (initialEnemy) {
+        currentEnemy = initialEnemy;
+    }
+
     initializeOpacitySlider('skillsOpacitySlider', 'skillsBackgroundOpacity', '--main-bg-opacity', 0.05);
     initializeDataTypeSelector();
     initializeEnemySelector();
@@ -29,6 +35,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     populateEnemyDropdown();
     renderChart();
     renderSkillBreakdown();
+
+    // Set the enemy selector to the initial value if provided
+    if (initialEnemy && enemySelector) {
+        enemySelector.value = initialEnemy;
+    }
 });
 
 // Initialize data type selector
@@ -59,6 +70,11 @@ async function loadSkillData() {
             // Historical data
             const timestamp = fightId.replace('fight_', '');
             endpoint = `http://${SERVER_URL}/api/history/${timestamp}/skill/${uid}`;
+
+            // Add enemy filter if not "all"
+            if (currentEnemy && currentEnemy !== 'all') {
+                endpoint += `?enemy=${encodeURIComponent(currentEnemy)}`;
+            }
         } else {
             // Current/live data
             endpoint = `http://${SERVER_URL}/api/skill/${uid}`;

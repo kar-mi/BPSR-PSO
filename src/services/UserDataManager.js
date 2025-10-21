@@ -36,9 +36,21 @@ class UserDataManager {
         // Configurable fight timeout (default 15 seconds)
         this.fightTimeout = 15 * 1000; // milliseconds
 
+        // inactive timeout
+        this.inactiveTimeout = 120 * 1000; // milliseconds
+
         // 自动保存
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
+
+        //check every 5 seconds for timeout
+        this.intervals.push(
+            setInterval(() => {
+                if (this.isShuttingDown) return;
+                this.checkTimeoutClear();
+            }, 5 * 1000)
+        );
+
         this.intervals.push(
             setInterval(() => {
                 if (this.isShuttingDown) return;
@@ -53,15 +65,7 @@ class UserDataManager {
             setInterval(() => {
                 if (this.isShuttingDown) return;
                 this.cleanUpInactiveUsers();
-            }, 30 * 1000)
-        );
-
-        // New: Interval to check for timeout-based fight clearing every 5 seconds
-        this.intervals.push(
-            setInterval(() => {
-                if (this.isShuttingDown) return;
-                this.checkTimeoutClear();
-            }, 5 * 1000)
+            }, 120 * 1000)
         );
     }
 
@@ -94,15 +98,14 @@ class UserDataManager {
         const currentTime = Date.now();
 
         for (const [uid, user] of this.users.entries()) {
-            if (currentTime - user.lastUpdateTime > this.fightTimeout) {
+            if (currentTime - user.lastUpdateTime > this.inactiveTimeout) {
                 socket.emit('user_deleted', { uid });
 
                 this.users.delete(uid);
-                logger.info(`Removed inactive user with uid ${uid} (timeout: ${this.fightTimeout}ms)`);
+                logger.info(`Removed inactive user with uid ${uid} (timeout: ${this.inactiveTimeout}ms)`);
             }
         }
     }
-
     async init() {
         await this.loadUserCache();
     }
@@ -184,15 +187,12 @@ class UserDataManager {
 
     addDamage(uid, skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue = 0, targetUid) {
         if (config.IS_PAUSED) return;
-        if (config.GLOBAL_SETTINGS.onlyRecordEliteDummy && targetUid !== 75) return;
-        this.checkTimeoutClear();
         const user = this.getUser(uid);
         user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue, targetUid);
     }
 
     addHealing(uid, skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid) {
         if (config.IS_PAUSED) return;
-        this.checkTimeoutClear();
         if (uid !== 0) {
             const user = this.getUser(uid);
             user.addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid);
@@ -201,7 +201,6 @@ class UserDataManager {
 
     addTakenDamage(uid, damage, isDead) {
         if (config.IS_PAUSED) return;
-        this.checkTimeoutClear();
         const user = this.getUser(uid);
         user.addTakenDamage(damage, isDead);
     }
