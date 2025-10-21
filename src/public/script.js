@@ -35,7 +35,7 @@ function renderDataList(users) {
     const totalDamageOverall = users.reduce((sum, user) => sum + user.total_damage.total, 0);
     const totalHealingOverall = users.reduce((sum, user) => sum + user.total_healing.total, 0);
 
-    users.sort((a, b) => b.total_dps - a.total_dps);
+    users.sort((a, b) => b.total_damage.total - a.total_damage.total);
 
     // Pre-calculate reciprocals for percentage calculations (avoid division in loop)
     const damageMultiplier = totalDamageOverall > 0 ? 100 / totalDamageOverall : 0;

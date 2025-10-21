@@ -10,7 +10,8 @@ let userColors = {};
 let currentDateRange = { startDate: null, endDate: null };
 let currentFightId = null; // Track current fight being viewed
 let currentDataType = 'damage'; // 'damage' or 'healing'
-let currentSortColumn = 'dps'; // 'rank', 'name', 'total', 'dps', 'percent', 'crit', 'lucky'
+let currentEnemy = 'all'; // 'all' or specific enemy name
+let currentSortColumn = 'total'; // 'rank', 'name', 'total', 'dps', 'percent', 'crit', 'lucky'
 let currentSortOrder = 'desc'; // 'asc' or 'desc'
 
 // DOM elements
@@ -23,6 +24,7 @@ const fightList = document.getElementById('fightList');
 const fightDetailsContainer = document.getElementById('fightDetailsContainer');
 const fightDetailsTable = document.getElementById('fightDetailsTable');
 const dataTypeFilter = document.getElementById('dataTypeFilter');
+const enemyFilter = document.getElementById('enemyFilter');
 
 // Open skill breakdown window for a user
 function openSkillBreakdown(uid, userName, userProfession) {
@@ -80,7 +82,7 @@ function renderDataList(users) {
     const totalDamageOverall = users.reduce((sum, user) => sum + user.total_damage.total, 0);
     const totalHealingOverall = users.reduce((sum, user) => sum + user.total_healing.total, 0);
 
-    users.sort((a, b) => b.total_dps - a.total_dps);
+    users.sort((a, b) => b.total_damage.total - a.total_damage.total);
 
     // Pre-calculate multipliers to avoid division in loop
     const damageMultiplier = totalDamageOverall > 0 ? 100 / totalDamageOverall : 0;
@@ -198,6 +200,15 @@ document.addEventListener('DOMContentLoaded', () => {
     dataTypeFilter.addEventListener('change', (event) => {
         currentDataType = event.target.value;
         renderFightDetailsTable();
+    });
+
+    // Initialize enemy filter
+    enemyFilter.addEventListener('change', async (event) => {
+        currentEnemy = event.target.value;
+        // Reload fight data with enemy filter
+        if (currentFightId) {
+            await reloadFightData(currentFightId, currentEnemy);
+        }
     });
 
     // Load fight history with the initialized date range
@@ -673,22 +684,39 @@ function renderFightDetailsTable() {
 
 // View a specific fight
 async function viewFight(fightId) {
+    // Store current fight ID and reset enemy filter
+    currentFightId = fightId;
+    currentEnemy = 'all';
+
+    // Hide history container and show fight details table
+    historyContainer.classList.add('hidden');
+    columnsContainer.classList.add('hidden');
+    fightDetailsContainer.classList.remove('hidden');
+
+    // Load enemies for this fight and populate dropdown
+    await loadFightEnemies(fightId);
+
+    // Load the fight data
+    await reloadFightData(fightId, 'all');
+}
+
+// Reload fight data with optional enemy filter
+async function reloadFightData(fightId, enemyFilter = 'all') {
     try {
-        console.log(`Loading fight data for: ${fightId}`);
-        const response = await fetch(`http://${SERVER_URL}/api/fight/${fightId}`);
+        console.log(`Loading fight data for: ${fightId}, enemy: ${enemyFilter}`);
+
+        // Build URL with enemy parameter if not "all"
+        let url = `http://${SERVER_URL}/api/fight/${fightId}`;
+        if (enemyFilter && enemyFilter !== 'all') {
+            url += `?enemy=${encodeURIComponent(enemyFilter)}`;
+        }
+
+        const response = await fetch(url);
         const data = await response.json();
 
         console.log('Fight data response:', data);
 
         if (data.code === 0) {
-            // Store current fight ID for skill breakdown
-            currentFightId = fightId;
-
-            // Hide history container and show fight details table
-            historyContainer.classList.add('hidden');
-            columnsContainer.classList.add('hidden');
-            fightDetailsContainer.classList.remove('hidden');
-
             // Transform historical user data to match current format
             allUsers = {};
             userColors = {};
@@ -720,7 +748,8 @@ async function viewFight(fightId) {
                     };
                 }
 
-                console.log(`Loaded fight ${fightId} with ${Object.keys(allUsers).length} users:`, allUsers);
+                console.log(`Loaded fight ${fightId} with ${Object.keys(allUsers).length} users (enemy: ${enemyFilter}):`, allUsers);
+
                 renderFightDetailsTable();
             } else {
                 console.log('No user stats found in fight data');
@@ -734,6 +763,39 @@ async function viewFight(fightId) {
     } catch (error) {
         console.error('Error loading fight:', error);
         alert('Error loading fight: ' + error.message);
+    }
+}
+
+// Load enemies for a specific fight
+async function loadFightEnemies(fightId) {
+    try {
+        const response = await fetch(`http://${SERVER_URL}/api/fight/${fightId}/enemies`);
+        const data = await response.json();
+
+        if (data.code === 0) {
+            // Reset enemy filter to "all"
+            currentEnemy = 'all';
+
+            // Populate enemy dropdown
+            enemyFilter.innerHTML = '<option value="all">All Enemies</option>';
+
+            (data.data.enemies || []).forEach((enemyName) => {
+                const option = document.createElement('option');
+                option.value = enemyName;
+                option.textContent = enemyName;
+                enemyFilter.appendChild(option);
+            });
+
+            console.log(`Loaded ${(data.data.enemies || []).length} enemies for fight ${fightId}`);
+        } else {
+            console.warn('Failed to load enemies:', data.msg);
+            // Reset to default if failed
+            enemyFilter.innerHTML = '<option value="all">All Enemies</option>';
+        }
+    } catch (error) {
+        console.error('Error loading fight enemies:', error);
+        // Reset to default if error
+        enemyFilter.innerHTML = '<option value="all">All Enemies</option>';
     }
 }
 

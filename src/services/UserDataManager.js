@@ -55,6 +55,14 @@ class UserDataManager {
                 this.cleanUpInactiveUsers();
             }, 30 * 1000)
         );
+
+        // New: Interval to check for timeout-based fight clearing every 5 seconds
+        this.intervals.push(
+            setInterval(() => {
+                if (this.isShuttingDown) return;
+                this.checkTimeoutClear();
+            }, 5 * 1000)
+        );
     }
 
     /**
@@ -406,6 +414,23 @@ class UserDataManager {
                 await fsPromises.mkdir(usersDir, { recursive: true });
             }
 
+            // Wait for any pending fight.log writes to complete before saving other files
+            // This prevents race conditions where JSON files are saved but fight.log is still being written
+            await this.logLock.acquire();
+            try {
+                // Ensure fight.log exists (create empty file if no logs were written)
+                const fightLogPath = path.join(logDir, 'fight.log');
+                try {
+                    await fsPromises.access(fightLogPath);
+                } catch (error) {
+                    // fight.log doesn't exist, create an empty one
+                    await fsPromises.writeFile(fightLogPath, '', 'utf8');
+                    logger.debug(`Created empty fight.log for timestamp ${timestamp}`);
+                }
+            } finally {
+                this.logLock.release();
+            }
+
             const allUserDataPath = path.join(logDir, 'allUserData.json');
             await fsPromises.writeFile(allUserDataPath, JSON.stringify(allUsersData, null, 2), 'utf8');
             for (const [uid, userData] of userDatas.entries()) {
@@ -423,12 +448,12 @@ class UserDataManager {
     checkTimeoutClear() {
         if (!config.GLOBAL_SETTINGS.autoClearOnTimeout || this.lastLogTime === 0 || this.users.size === 0) return;
         const currentTime = Date.now();
-        if (this.lastLogTime && currentTime - this.lastLogTime > 15000) {
+        if (this.lastLogTime && currentTime - this.lastLogTime > this.fightTimeout) {
             // Fire and forget - don't await since this is called from sync contexts
             this.clearAll().catch((error) => {
                 logger.error('Error during timeout clear:', error);
             });
-            logger.info('Timeout reached, statistics cleared!');
+            logger.info(`Timeout reached (${this.fightTimeout}ms), statistics cleared!`);
         }
     }
 
