@@ -71,6 +71,13 @@ ipcMain.on('open-history-window', async (event) => {
     });
 });
 
+// Notify history window to refresh
+ipcMain.on('refresh-history-window', () => {
+    if (historyWindow && !historyWindow.isDestroyed()) {
+        historyWindow.webContents.send('history-data-updated');
+    }
+});
+
 ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId }) => {
     // Check if window for this UID already exists
     if (skillWindows[uid] && !skillWindows[uid].isDestroyed()) {
@@ -120,3 +127,10 @@ ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId 
         delete skillWindows[uid];
     });
 });
+
+// Helper function to notify history window
+export function notifyHistoryWindowRefresh() {
+    if (historyWindow && !historyWindow.isDestroyed()) {
+        historyWindow.webContents.send('history-data-updated');
+    }
+}

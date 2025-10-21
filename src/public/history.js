@@ -265,6 +265,14 @@ document.addEventListener('DOMContentLoaded', () => {
             window.close();
         });
     }
+
+    // Listen for history data updates from main process
+    if (window.electronAPI && window.electronAPI.onHistoryDataUpdated) {
+        window.electronAPI.onHistoryDataUpdated(() => {
+            console.log('History data updated, reloading fight history...');
+            loadFightHistory();
+        });
+    }
 });
 
 // Format date for datetime-local input

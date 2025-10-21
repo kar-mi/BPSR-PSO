@@ -5,6 +5,7 @@ import socket from './Socket.js';
 import logger from './Logger.js';
 import fsPromises from 'fs/promises';
 import path from 'path';
+import { notifyHistoryWindowRefresh } from '../client/IpcListeners.js';
 
 class UserDataManager {
     constructor(logger) {
@@ -337,7 +338,7 @@ class UserDataManager {
         this.enemyCache.maxHp.clear();
     }
 
-    clearAll() {
+    async clearAll() {
         const usersToSave = this.users;
         const saveStartTime = this.startTime;
 
@@ -345,10 +346,13 @@ class UserDataManager {
         this.startTime = Date.now();
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
-        this.saveAllUserData(usersToSave, saveStartTime);
+        await this.saveAllUserData(usersToSave, saveStartTime);
 
         // Emit clear event to frontend
         socket.emit('data_cleared');
+
+        // Notify history window to refresh
+        notifyHistoryWindowRefresh();
     }
 
     getUserIds() {
@@ -408,7 +412,10 @@ class UserDataManager {
         if (!config.GLOBAL_SETTINGS.autoClearOnTimeout || this.lastLogTime === 0 || this.users.size === 0) return;
         const currentTime = Date.now();
         if (this.lastLogTime && currentTime - this.lastLogTime > 15000) {
-            this.clearAll();
+            // Fire and forget - don't await since this is called from sync contexts
+            this.clearAll().catch((error) => {
+                logger.error('Error during timeout clear:', error);
+            });
             logger.info('Timeout reached, statistics cleared!');
         }
     }

@@ -76,8 +76,8 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     });
 
     // Clear all statistics
-    router.get('/clear', (req, res) => {
-        userDataManager.clearAll();
+    router.get('/clear', async (req, res) => {
+        await userDataManager.clearAll();
         logger.info('Statistics have been cleared!');
         res.json({
             code: 0,
