@@ -389,7 +389,16 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     // Check if fight.log exists before including this fight
                     const fightLogPath = path.join('./logs', timestamp.toString(), 'fight.log');
                     try {
+                        // Check if the file exists
                         await fsPromises.access(fightLogPath);
+
+                        // Check file size using stat()
+                        const stats = await fsPromises.stat(fightLogPath);
+                        if (stats.size === 0) {
+                            // fight.log exists but is empty, skip this fight
+                            logger.warn(`Skipping fight ${timestamp}: fight.log is empty`);
+                            continue;
+                        }
                     } catch (error) {
                         // fight.log doesn't exist, skip this fight
                         logger.warn(`Skipping fight ${timestamp}: fight.log not found`);
