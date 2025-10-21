@@ -1,33 +1,9 @@
-const colorHues = [
-    210, // Blue
-    30, // Orange
-    270, // Purple
-    150, // Teal
-    330, // Magenta
-    60, // Yellow
-    180, // Cyan
-    0, // Red
-    240, // Indigo
-];
-
-let colorIndex = 0;
-
-function getNextColorShades() {
-    const h = colorHues[colorIndex];
-    colorIndex = (colorIndex + 1) % colorHues.length;
-    const s = 90;
-    const l_dps = 30;
-    const l_hps = 20;
-
-    const dpsColor = `hsl(${h}, ${s}%, ${l_dps}%)`;
-    const hpsColor = `hsl(${h}, ${s}%, ${l_hps}%)`;
-    return { dps: dpsColor, hps: hpsColor };
-}
+import { SERVER_URL, getNextColorShades, formatNumber, getProfessionIconHtml, initializeOpacitySlider } from './utils.js';
 
 // DOM elements - will be initialized after DOMContentLoaded
 let columnsContainer, settingsContainer, helpContainer, passthroughTitle;
 let pauseButton, clearButton, helpButton, settingsButton, closeButton;
-let allButtons, serverStatus, opacitySlider, keybindList;
+let allButtons, keybindList;
 let historyButton, timeoutSlider, timeoutValue;
 
 let allUsers = {};
@@ -41,21 +17,12 @@ const WEBSOCKET_IDLE_TIMEOUT = 10000; // Consider stale after 10s of no messages
 let reconnectAttempts = 0;
 const MAX_RECONNECT_INTERVAL = 30000; // Cap backoff at 30s
 
-const SERVER_URL = 'localhost:8990';
-
 // Keybind management
 let currentKeybinds = {};
 let keybindMap = new Map(); // Optimized lookup for keybind validation
 let isRecordingKeybind = false;
 let currentRecordingElement = null;
 let keybindEventListeners = new Map(); // Track event listeners for cleanup
-
-function formatNumber(num) {
-    if (isNaN(num)) return 'NaN';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return Math.round(num).toString();
-}
 
 function renderDataList(users) {
     // Early exit if no users
@@ -99,13 +66,7 @@ function renderDataList(users) {
             ? `${user.name} - ${professionDisplay} (${user.fightPoint})`
             : `${user.name} - ${professionDisplay}`;
 
-        let classIconHtml = '';
-        const professionString = user.profession ? user.profession.trim() : '';
-        if (professionString) {
-            const mainProfession = professionString.split('(')[0].trim();
-            const iconFileName = mainProfession.toLowerCase().replace(/ /g, '_') + '.png';
-            classIconHtml = `<img src="assets/${iconFileName}" class="class-icon" alt="${mainProfession}" onerror="this.style.display='none'">`;
-        }
+        const classIconHtml = getProfessionIconHtml(user.profession);
 
         let subBarHtml = '';
         if (user.total_healing.total > 0 || user.total_hps > 0) {
@@ -369,10 +330,6 @@ function toggleHelp() {
     }
 }
 
-function setBackgroundOpacity(value) {
-    document.documentElement.style.setProperty('--main-bg-opacity', value);
-}
-
 //history functions
 function updateTimeoutValue() {
     console.log('Updating timeout display to:', timeoutSlider.value);
@@ -626,8 +583,6 @@ function initializeDOMElements() {
     timeoutSlider = document.getElementById('timeoutSlider');
     timeoutValue = document.getElementById('timeoutValue');
     allButtons = [clearButton, pauseButton, helpButton, settingsButton, historyButton, closeButton];
-    serverStatus = document.getElementById('serverStatus');
-    opacitySlider = document.getElementById('opacitySlider');
     keybindList = document.getElementById('keybindList');
 }
 
@@ -635,21 +590,8 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDOMElements();
     initialize();
 
-    const savedOpacity = localStorage.getItem('backgroundOpacity');
-
-    if (opacitySlider) {
-        if (savedOpacity !== null) {
-            opacitySlider.value = savedOpacity;
-            setBackgroundOpacity(savedOpacity);
-        } else {
-            setBackgroundOpacity(opacitySlider.value);
-        }
-        opacitySlider.addEventListener('input', (event) => {
-            const newOpacity = event.target.value;
-            setBackgroundOpacity(newOpacity);
-            localStorage.setItem('backgroundOpacity', newOpacity);
-        });
-    }
+    // Initialize opacity slider with utility function
+    initializeOpacitySlider('opacitySlider', 'backgroundOpacity');
 
     settingsButton.addEventListener('click', () => {
         if (!settingsContainer.classList.contains('hidden')) {

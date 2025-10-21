@@ -179,7 +179,7 @@ class UserDataManager {
         if (config.GLOBAL_SETTINGS.onlyRecordEliteDummy && targetUid !== 75) return;
         this.checkTimeoutClear();
         const user = this.getUser(uid);
-        user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue);
+        user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue, targetUid);
     }
 
     addHealing(uid, skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid) {
@@ -187,7 +187,7 @@ class UserDataManager {
         this.checkTimeoutClear();
         if (uid !== 0) {
             const user = this.getUser(uid);
-            user.addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky);
+            user.addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid);
         }
     }
 
@@ -297,6 +297,18 @@ class UserDataManager {
             name: user.name,
             profession: user.profession + (user.subProfession ? `-${user.subProfession}` : ''),
             skills: user.getSkillSummary(),
+            attr: user.attr,
+        };
+    }
+
+    getUserSkillDataByEnemy(uid, enemyId = null) {
+        const user = this.users.get(uid);
+        if (!user) return null;
+        return {
+            uid: user.uid,
+            name: user.name,
+            profession: user.profession + (user.subProfession ? `-${user.subProfession}` : ''),
+            skills: user.getSkillSummaryByEnemy(enemyId),
             attr: user.attr,
         };
     }

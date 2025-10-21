@@ -1,32 +1,5 @@
 // Fight History Window JavaScript
-const SERVER_URL = 'localhost:8990';
-
-// Color system (same as main script)
-const colorHues = [
-    210, // Blue
-    30, // Orange
-    270, // Purple
-    150, // Teal
-    330, // Magenta
-    60, // Yellow
-    180, // Cyan
-    0, // Red
-    240, // Indigo
-];
-
-let colorIndex = 0;
-
-function getNextColorShades() {
-    const h = colorHues[colorIndex];
-    colorIndex = (colorIndex + 1) % colorHues.length;
-    const s = 90;
-    const l_dps = 30;
-    const l_hps = 20;
-
-    const dpsColor = `hsl(${h}, ${s}%, ${l_dps}%)`;
-    const hpsColor = `hsl(${h}, ${s}%, ${l_hps}%)`;
-    return { dps: dpsColor, hps: hpsColor };
-}
+import { SERVER_URL, getNextColorShades, formatNumber, getProfessionIconHtml, initializeOpacitySlider, formatDateForInput } from './utils.js';
 
 // State variables
 let currentView = 'history'; // 'cumulative', 'history'
@@ -50,14 +23,6 @@ const fightList = document.getElementById('fightList');
 const fightDetailsContainer = document.getElementById('fightDetailsContainer');
 const fightDetailsTable = document.getElementById('fightDetailsTable');
 const dataTypeFilter = document.getElementById('dataTypeFilter');
-
-// Utility function for number formatting
-function formatNumber(num) {
-    if (isNaN(num)) return 'NaN';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return Math.round(num).toString();
-}
 
 // Open skill breakdown window for a user
 function openSkillBreakdown(uid, userName, userProfession) {
@@ -151,13 +116,7 @@ function renderDataList(users) {
 
         const displayName = user.fightPoint ? `${user.name} (${user.fightPoint})` : user.name;
 
-        let classIconHtml = '';
-        const professionString = user.profession ? user.profession.trim() : '';
-        if (professionString) {
-            const mainProfession = professionString.split('(')[0].trim();
-            const iconFileName = mainProfession.toLowerCase().replace(/ /g, '_') + '.png';
-            classIconHtml = `<img src="assets/${iconFileName}" class="class-icon" alt="${mainProfession}" onerror="this.style.display='none'">`;
-        }
+        const classIconHtml = getProfessionIconHtml(user.profession);
 
         let subBarHtml = '';
         if (user.total_healing.total > 0 || user.total_hps > 0) {
@@ -232,22 +191,8 @@ document.addEventListener('DOMContentLoaded', () => {
     currentDateRange.startDate = startDate.toISOString();
     currentDateRange.endDate = endDate.toISOString();
 
-    // Initialize opacity slider
-    const opacitySlider = document.getElementById('historyOpacitySlider');
-    const savedOpacity = localStorage.getItem('historyBackgroundOpacity');
-
-    if (savedOpacity !== null) {
-        opacitySlider.value = savedOpacity;
-        document.documentElement.style.setProperty('--main-bg-opacity', savedOpacity);
-    } else {
-        document.documentElement.style.setProperty('--main-bg-opacity', opacitySlider.value);
-    }
-
-    opacitySlider.addEventListener('input', (event) => {
-        const newOpacity = event.target.value;
-        document.documentElement.style.setProperty('--main-bg-opacity', newOpacity);
-        localStorage.setItem('historyBackgroundOpacity', newOpacity);
-    });
+    // Initialize opacity slider with utility function
+    initializeOpacitySlider('historyOpacitySlider', 'historyBackgroundOpacity');
 
     // Initialize data type filter
     dataTypeFilter.addEventListener('change', (event) => {
@@ -257,6 +202,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load fight history with the initialized date range
     loadFightHistory();
+
+    // Add event listeners for all buttons
+    document.getElementById('viewCumulativeButton').addEventListener('click', viewCumulativeStats);
+    document.getElementById('viewHistoryButton').addEventListener('click', viewFightHistory);
+    document.getElementById('clearHistoryButton').addEventListener('click', clearFightHistory);
+    document.getElementById('applyDateRange').addEventListener('click', applyDateRange);
+    document.getElementById('resetDateRange').addEventListener('click', resetDateRange);
 
     // Handle close button
     const closeButton = document.getElementById('closeButton');
@@ -274,16 +226,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
-
-// Format date for datetime-local input
-function formatDateForInput(date) {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-    return `${year}-${month}-${day}T${hours}:${minutes}`;
-}
 
 // Load fight history data
 async function loadFightHistory() {
@@ -663,13 +605,7 @@ function renderFightDetailsTable() {
         const barColor = isTanking ? 'hsl(0, 70%, 25%)' : (isDamage ? colors.dps : colors.hps);
 
         // Get profession icon
-        let classIconHtml = '';
-        const professionString = user.profession ? user.profession.trim() : '';
-        if (professionString) {
-            const mainProfession = professionString.split('(')[0].trim();
-            const iconFileName = mainProfession.toLowerCase().replace(/ /g, '_') + '.png';
-            classIconHtml = `<img src="assets/${iconFileName}" class="class-icon-small" alt="${mainProfession}" onerror="this.style.display='none'">`;
-        }
+        const classIconHtml = getProfessionIconHtml(user.profession, 'small');
 
         const displayName = user.fightPoint ? `${user.name} (${user.fightPoint})` : user.name;
 
@@ -677,7 +613,7 @@ function renderFightDetailsTable() {
         const dpsHpsDisplay = isTanking ? '-' : formatNumber(dpsHps);
 
         tableHTML += `
-            <tr class="stats-row" data-uid="${user.id}" ondblclick="openSkillBreakdown('${user.id}', '${user.name.replace(/'/g, "\\'")}', '${user.profession.replace(/'/g, "\\'")}')">
+            <tr class="stats-row" data-uid="${user.id}" data-user-name="${user.name.replace(/"/g, '&quot;')}" data-user-profession="${user.profession.replace(/"/g, '&quot;')}">
                 <td colspan="${colspan}" style="padding: 0; position: relative;">
                     <div class="stats-row-background" style="width: ${percentageNum}%; background-color: ${barColor};"></div>
                     <div class="stats-row-content ${isTanking ? 'tanking-row' : ''}">
@@ -720,6 +656,17 @@ function renderFightDetailsTable() {
             }
 
             renderFightDetailsTable();
+        });
+    });
+
+    // Add double-click handlers to table rows for skill breakdown
+    const rows = fightDetailsTable.querySelectorAll('.stats-row[data-uid]');
+    rows.forEach((row) => {
+        row.addEventListener('dblclick', () => {
+            const uid = row.getAttribute('data-uid');
+            const userName = row.getAttribute('data-user-name');
+            const userProfession = row.getAttribute('data-user-profession');
+            openSkillBreakdown(uid, userName, userProfession);
         });
     });
 }

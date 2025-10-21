@@ -1,4 +1,4 @@
-const SERVER_URL = 'localhost:8990';
+import { SERVER_URL, formatNumber, getChartColors, initializeOpacitySlider } from './utils.js';
 
 let userData = null;
 let skillsData = null;
@@ -21,7 +21,7 @@ const enemySelector = document.getElementById('enemySelector');
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
-    initializeOpacitySlider();
+    initializeOpacitySlider('skillsOpacitySlider', 'skillsBackgroundOpacity', '--main-bg-opacity', 0.05);
     initializeDataTypeSelector();
     initializeEnemySelector();
     await loadSkillData();
@@ -30,20 +30,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderChart();
     renderSkillBreakdown();
 });
-
-// Initialize opacity slider
-function initializeOpacitySlider() {
-    const slider = document.getElementById('skillsOpacitySlider');
-    const savedOpacity = localStorage.getItem('skillsBackgroundOpacity') || '0.05';
-    slider.value = savedOpacity;
-    document.documentElement.style.setProperty('--main-bg-opacity', savedOpacity);
-
-    slider.addEventListener('input', (e) => {
-        const opacity = e.target.value;
-        document.documentElement.style.setProperty('--main-bg-opacity', opacity);
-        localStorage.setItem('skillsBackgroundOpacity', opacity);
-    });
-}
 
 // Initialize data type selector
 function initializeDataTypeSelector() {
@@ -58,8 +44,10 @@ function initializeDataTypeSelector() {
 function initializeEnemySelector() {
     enemySelector.addEventListener('change', async (e) => {
         currentEnemy = e.target.value;
+        await loadSkillData(); // Reload skills with enemy filter
         await loadTimeSeriesData();
         renderChart();
+        renderSkillBreakdown();
     });
 }
 
@@ -74,6 +62,11 @@ async function loadSkillData() {
         } else {
             // Current/live data
             endpoint = `http://${SERVER_URL}/api/skill/${uid}`;
+
+            // Add enemy filter if not "all"
+            if (currentEnemy && currentEnemy !== 'all') {
+                endpoint += `?enemy=${encodeURIComponent(currentEnemy)}`;
+            }
         }
 
         const response = await fetch(endpoint);
@@ -163,7 +156,13 @@ function renderSkillBreakdown() {
     // Update title
     const title = document.getElementById('skillsTitle');
     const typeLabel = currentDataType === 'damage' ? 'Damage' : 'Healing';
-    title.textContent = `${userData.name} - ${typeLabel}`;
+
+    // Add enemy filter notice if a specific enemy is selected
+    if (currentEnemy && currentEnemy !== 'all') {
+        title.textContent = `${userData.name} - ${typeLabel} (Filtered: ${currentEnemy})`;
+    } else {
+        title.textContent = `${userData.name} - ${typeLabel}`;
+    }
 
     if (!skillsData || Object.keys(skillsData).length === 0) {
         columnsContainer.innerHTML = '<p class="no-data">No skill data available</p>';
@@ -421,12 +420,4 @@ function renderChart() {
             },
         },
     });
-}
-
-// Format number with commas
-function formatNumber(num) {
-    if (isNaN(num)) return 'NaN';
-    if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
-    if (num >= 1000) return (num / 1000).toFixed(1) + 'K';
-    return Math.round(num).toString();
 }

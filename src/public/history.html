@@ -20,18 +20,17 @@
                         <span class="app-title">Fight History</span>
                     </div>
                     <div class="button-group">
-                        <button id="viewCumulativeButton" onclick="viewCumulativeStats()" title="Cumulative Stats">
+                        <button id="viewCumulativeButton" title="Cumulative Stats">
                             Cumulative
                         </button>
                         <button
                             id="viewHistoryButton"
-                            onclick="viewFightHistory()"
                             title="Fight History"
                             class="active"
                         >
                             History
                         </button>
-                        <button id="clearHistoryButton" onclick="clearFightHistory()" title="Clear History">
+                        <button id="clearHistoryButton" title="Clear History">
                             Clear
                         </button>
                         <div class="opacity-control">
@@ -46,7 +45,7 @@
                                 title="Adjust Window Opacity"
                             />
                         </div>
-                        <button id="closeButton" onclick="window.close()" title="Close Window">X</button>
+                        <button id="closeButton" title="Close Window">X</button>
                     </div>
                 </div>
                 <div id="fightDetailsContainer" class="hidden">
@@ -75,8 +74,8 @@
                                     <input type="datetime-local" id="startDate" />
                                     <label for="endDate">To:</label>
                                     <input type="datetime-local" id="endDate" />
-                                    <button id="applyDateRange" onclick="applyDateRange()">Apply</button>
-                                    <button id="resetDateRange" onclick="resetDateRange()">Reset</button>
+                                    <button id="applyDateRange">Apply</button>
+                                    <button id="resetDateRange">Reset</button>
                                 </div>
                                 <div id="fightList" class="fight-list"></div>
                             </div>
@@ -85,6 +84,6 @@
                 </div>
             </div>
         </div>
-        <script src="history.js"></script>
+        <script type="module" src="history.js"></script>
     </body>
 </html>

@@ -125,7 +125,11 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get skill data for a specific user ID
     router.get('/skill/:uid', (req, res) => {
         const uid = parseInt(req.params.uid);
-        const skillData = userDataManager.getUserSkillData(uid);
+        const enemyId = req.query.enemy ? parseInt(req.query.enemy) : null;
+
+        const skillData = enemyId !== null
+            ? userDataManager.getUserSkillDataByEnemy(uid, enemyId)
+            : userDataManager.getUserSkillData(uid);
 
         if (!skillData) {
             return res.status(404).json({
