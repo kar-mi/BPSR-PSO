@@ -4,6 +4,15 @@ export class BinaryReader {
         this.offset = offset;
     }
 
+    // Add position getter/setter for consistency
+    get position() {
+        return this.offset;
+    }
+
+    set position(value) {
+        this.offset = value;
+    }
+
     readUInt64() {
         const value = this.buffer.readBigUInt64BE(this.offset);
         this.offset += 8;
