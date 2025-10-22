@@ -17,17 +17,32 @@ import cap from 'cap';
 export function createApiRouter(isPaused, SETTINGS_PATH) {
     const router = express.Router();
 
+    // Performance: Pre-compile regex patterns used in multiple routes
+    const TIMESTAMP_REGEX = /^\d+$/;
+    const LOG_PARSE_REGEX =
+        /\[([^\]]+)\] \[(DMG|HEAL)\] DS: \w+ SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#\d+\((enemy|player)\).*ID: (\d+).*VAL: (\d+).*EXT: (\w+)/;
+    const LOG_PARSE_SIMPLE_REGEX =
+        /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+
     // Middleware to parse JSON requests
     router.use(express.json());
 
     // GET all user data
     router.get('/data', (req, res) => {
-        const userData = userDataManager.getAllUsersData();
-        const data = {
-            code: 0,
-            user: userData,
-        };
-        res.json(data);
+        try {
+            const userData = userDataManager.getAllUsersData();
+            const data = {
+                code: 0,
+                user: userData,
+            };
+            res.json(data);
+        } catch (error) {
+            logger.error('Error getting user data:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to get user data',
+            });
+        }
     });
 
     // POST update fight timeout
@@ -126,6 +141,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get skill data for a specific user ID
     router.get('/skill/:uid', (req, res) => {
         const uid = parseInt(req.params.uid);
+
+        // Security: Validate UID is a valid number
+        if (isNaN(uid) || uid < 0) {
+            return res.status(400).json({
+                code: 1,
+                msg: 'Invalid user ID',
+            });
+        }
+
         const enemyId = req.query.enemy ? parseInt(req.query.enemy) : null;
 
         const skillData =
@@ -149,6 +173,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get history summary for a specific timestamp
     router.get('/history/:timestamp/summary', async (req, res) => {
         const { timestamp } = req.params;
+
+        // Security: Validate timestamp is numeric only to prevent path traversal
+        if (!TIMESTAMP_REGEX.test(timestamp)) {
+            return res.status(400).json({
+                code: 1,
+                msg: 'Invalid timestamp format',
+            });
+        }
+
         const historyFilePath = path.join('./logs', timestamp, 'summary.json');
 
         try {
@@ -178,6 +211,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get history data for a specific timestamp
     router.get('/history/:timestamp/data', async (req, res) => {
         const { timestamp } = req.params;
+
+        // Security: Validate timestamp is numeric only to prevent path traversal
+        if (!TIMESTAMP_REGEX.test(timestamp)) {
+            return res.status(400).json({
+                code: 1,
+                msg: 'Invalid timestamp format',
+            });
+        }
+
         const historyFilePath = path.join('./logs', timestamp, 'allUserData.json');
 
         try {
@@ -208,6 +250,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     router.get('/history/:timestamp/skill/:uid', async (req, res) => {
         const { timestamp, uid } = req.params;
         const { enemy } = req.query; // Optional enemy filter
+
+        // Security: Validate timestamp and uid are numeric only to prevent path traversal
+        if (!TIMESTAMP_REGEX.test(timestamp) || !TIMESTAMP_REGEX.test(uid)) {
+            return res.status(400).json({
+                code: 1,
+                msg: 'Invalid timestamp or uid format',
+            });
+        }
+
         const historyFilePath = path.join('./logs', timestamp, 'users', `${uid}.json`);
 
         try {
@@ -221,14 +272,13 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 const lines = logContent.split('\n');
 
                 // Groups: 1:Timestamp, 2:DMG|HEAL, 3:Source Name, 4:Source UID, 5:Target Name, 6:Target Role, 7:Skill ID, 8:Value, 9:EXT value
-                const logRegex =
-                    /\[([^\]]+)\] \[(DMG|HEAL)\] DS: \w+ SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#\d+\((enemy|player)\).*ID: (\d+).*VAL: (\d+).*EXT: (\w+)/;
+                // Performance: Use pre-compiled regex
 
                 // Track per-skill stats for the specific enemy
                 const skillStatsPerEnemy = {};
 
                 for (const line of lines) {
-                    const match = line.match(logRegex);
+                    const match = line.match(LOG_PARSE_REGEX);
                     if (match) {
                         const type = match[2]; // DMG or HEAL
                         const playerUid = match[4];
@@ -315,6 +365,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Download historical fight log
     router.get('/history/:timestamp/download', (req, res) => {
         const { timestamp } = req.params;
+
+        // Security: Validate timestamp is numeric only to prevent path traversal
+        if (!TIMESTAMP_REGEX.test(timestamp)) {
+            return res.status(400).json({
+                code: 1,
+                msg: 'Invalid timestamp format',
+            });
+        }
+
         const historyFilePath = path.join('./logs', timestamp, 'fight.log');
         res.download(historyFilePath, `fight_${timestamp}.log`);
     });
@@ -521,6 +580,14 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             const { enemy } = req.query; // Optional enemy filter
             const timestamp = fightId.replace('fight_', '');
 
+            // Security: Validate timestamp is numeric only to prevent path traversal
+            if (!TIMESTAMP_REGEX.test(timestamp)) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid fight ID format',
+                });
+            }
+
             const userDataPath = path.join('./logs', timestamp, 'allUserData.json');
             const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
 
@@ -532,15 +599,13 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 const logContent = await fsPromises.readFile(logFilePath, 'utf8');
                 const lines = logContent.split('\n');
 
-                // Regex to parse log lines
-                const logRegex =
-                    /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+                // Performance: Use pre-compiled regex
 
                 // Track per-user stats for the specific enemy
                 const userStatsPerEnemy = {};
 
                 for (const line of lines) {
-                    const match = line.match(logRegex);
+                    const match = line.match(LOG_PARSE_SIMPLE_REGEX);
                     if (match) {
                         const type = match[2]; // DMG or HEAL
                         const playerUid = match[4];
@@ -637,22 +702,29 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         try {
             const { fightId } = req.params;
             const timestamp = fightId.replace('fight_', '');
+
+            // Security: Validate timestamp is numeric only to prevent path traversal
+            if (!TIMESTAMP_REGEX.test(timestamp)) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid fight ID format',
+                });
+            }
+
             const logFilePath = path.join('./logs', timestamp, 'fight.log');
 
             // Read the log file
             const logContent = await fsPromises.readFile(logFilePath, 'utf8');
             const lines = logContent.split('\n');
 
-            // Regex to parse log lines with target information
-            const logRegex =
-                /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+            // Performance: Use pre-compiled regex
 
             const enemies = new Set();
             const userEnemyMap = {}; // Map of uid -> Set of enemy names
 
             // Parse each line to extract enemy names and user-enemy relationships
             for (const line of lines) {
-                const match = line.match(logRegex);
+                const match = line.match(LOG_PARSE_SIMPLE_REGEX);
                 if (match) {
                     const playerUid = match[4];
                     const targetType = match[7];
@@ -787,15 +859,22 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         try {
             const { timestamp, uid } = req.params;
             const { enemy } = req.query; // Optional enemy filter
+
+            // Security: Validate timestamp and uid are numeric only to prevent path traversal
+            if (!/^\d+$/.test(timestamp) || !/^\d+$/.test(uid)) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid timestamp or uid format',
+                });
+            }
+
             const logFilePath = path.join('./logs', timestamp, 'fight.log');
 
             // Read the log file
             const logContent = await fsPromises.readFile(logFilePath, 'utf8');
             const lines = logContent.split('\n');
 
-            // Regex to parse log lines with target information
-            const logRegex =
-                /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+            // Performance: Use pre-compiled regex
 
             let firstTimestamp = null;
             let lastTimestamp = null;
@@ -804,7 +883,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             // First pass: collect all events for this user
             const userEvents = [];
             for (const line of lines) {
-                const match = line.match(logRegex);
+                const match = line.match(LOG_PARSE_SIMPLE_REGEX);
                 if (match) {
                     const [, timestamp, type, playerName, playerId, targetName, targetId, targetType, value] = match;
 

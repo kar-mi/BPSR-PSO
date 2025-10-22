@@ -221,7 +221,10 @@ export class PacketInterceptor {
                                     }
                                 }
                             }
-                        } catch (e) {}
+                        } catch (e) {
+                            // Server identification packet parsing failed - this is expected for non-game traffic
+                            logger.debug(`Server identification failed: ${e.message}`);
+                        }
                         return;
                     }
 

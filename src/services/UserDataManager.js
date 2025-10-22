@@ -189,12 +189,22 @@ class UserDataManager {
 
     addDamage(uid, skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue = 0, targetUid) {
         if (config.IS_PAUSED) return;
+        // Security: Validate damage is a reasonable number to prevent overflow
+        if (damage < 0 || damage > Number.MAX_SAFE_INTEGER) {
+            logger.warn(`Invalid damage value: ${damage} for uid ${uid}`);
+            return;
+        }
         const user = this.getUser(uid);
         user.addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue, targetUid);
     }
 
     addHealing(uid, skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid) {
         if (config.IS_PAUSED) return;
+        // Security: Validate healing is a reasonable number to prevent overflow
+        if (healing < 0 || healing > Number.MAX_SAFE_INTEGER) {
+            logger.warn(`Invalid healing value: ${healing} for uid ${uid}`);
+            return;
+        }
         if (uid !== 0) {
             const user = this.getUser(uid);
             user.addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid);
@@ -203,6 +213,11 @@ class UserDataManager {
 
     addTakenDamage(uid, damage, isDead) {
         if (config.IS_PAUSED) return;
+        // Security: Validate damage is a reasonable number to prevent overflow
+        if (damage < 0 || damage > Number.MAX_SAFE_INTEGER) {
+            logger.warn(`Invalid taken damage value: ${damage} for uid ${uid}`);
+            return;
+        }
         const user = this.getUser(uid);
         user.addTakenDamage(damage, isDead);
     }
