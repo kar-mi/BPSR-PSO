@@ -1,5 +1,7 @@
 import { exec } from 'child_process';
 import cap from 'cap';
+import fs from 'fs';
+import path from 'path';
 
 const VIRTUAL_KEYWORDS = ['zerotier', 'vmware', 'hyper-v', 'virtual', 'loopback', 'tap', 'bluetooth', 'wan miniport'];
 
@@ -135,11 +137,42 @@ export async function findByRoute(devices) {
 }
 
 /**
+ * Loads the saved network adapter preference from networkSettings.json
+ * @returns {string|null} The saved adapter preference ('auto' or device index) or null if not found
+ */
+function loadNetworkAdapterPreference() {
+    try {
+        const settingsPath = path.join('./networkSettings.json');
+        if (fs.existsSync(settingsPath)) {
+            const data = fs.readFileSync(settingsPath, 'utf8');
+            const settings = JSON.parse(data);
+            return settings.selectedAdapter || 'auto';
+        }
+    } catch (error) {
+        console.error('Failed to load network adapter preference:', error);
+    }
+    return 'auto';
+}
+
+/**
  * Finds the most suitable default network device by using the system's route table.
  * @param {Object} devices A map of network devices.
  * @returns {Promise<number|undefined>} The index of the default network device.
  */
 export async function findDefaultNetworkDevice(devices) {
+    // Check if user has set a specific adapter preference
+    const preference = loadNetworkAdapterPreference();
+
+    if (preference !== 'auto') {
+        const preferredIndex = parseInt(preference, 10);
+        if (!isNaN(preferredIndex) && devices[preferredIndex]) {
+            console.log(`Using user-selected network adapter: ${preferredIndex} - ${devices[preferredIndex].description}`);
+            return preferredIndex;
+        } else {
+            console.warn(`Saved network adapter ${preference} not found or invalid. Falling back to auto-detection.`);
+        }
+    }
+
     console.log('Auto detecting default network interface via route table...');
     try {
         const routeIndex = await findByRoute(devices);
