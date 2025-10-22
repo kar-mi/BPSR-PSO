@@ -248,7 +248,6 @@ function toggleHelp() {
     }
 }
 
-
 //Encounter Timer
 /**
  * Formats a duration in milliseconds into H:MM:SS or M:SS format.
@@ -334,9 +333,9 @@ function initializeDOMElements() {
     passthroughTitle = document.getElementById('passthroughTitle');
     passthroughKeybind = document.getElementById('passthroughKeybind');
     encounterTimer = document.getElementById('encounterTimer');
-    pauseButton = document.getElementById('pauseButton');
+    //pauseButton = document.getElementById('pauseButton');
     clearButton = document.getElementById('clearButton');
-    helpButton = document.getElementById('helpButton');
+    //helpButton = document.getElementById('helpButton');
     settingsButton = document.getElementById('settingsButton');
     closeButton = document.getElementById('closeButton');
     historyButton = document.getElementById('historyButton');
@@ -349,7 +348,7 @@ function initializeDOMElements() {
 function initializeResizeHandles() {
     const handles = document.querySelectorAll('.resize-handle');
 
-    handles.forEach(handle => {
+    handles.forEach((handle) => {
         let isResizing = false;
         let startX, startY, startWidth, startHeight, startWindowX, startWindowY;
         let resizeDirection = '';
@@ -378,6 +377,9 @@ function initializeResizeHandles() {
             startWindowX = windowBounds.x;
             startWindowY = windowBounds.y;
 
+            const minWidth = 549;
+            const minHeight = 362;
+
             const handleMouseMove = (moveEvent) => {
                 if (!isResizing) return;
 
@@ -392,36 +394,36 @@ function initializeResizeHandles() {
                 // Calculate new dimensions based on resize direction
                 switch (resizeDirection) {
                     case 'right':
-                        newWidth = Math.max(400, startWidth + deltaX);
+                        newWidth = Math.max(minWidth, startWidth + deltaX);
                         break;
                     case 'left':
-                        newWidth = Math.max(400, startWidth - deltaX);
+                        newWidth = Math.max(minWidth, startWidth - deltaX);
                         newX = startWindowX + (startWidth - newWidth);
                         break;
                     case 'bottom':
-                        newHeight = Math.max(42, startHeight + deltaY);
+                        newHeight = Math.max(minHeight, startHeight + deltaY);
                         break;
                     case 'top':
-                        newHeight = Math.max(42, startHeight - deltaY);
+                        newHeight = Math.max(minHeight, startHeight - deltaY);
                         newY = startWindowY + (startHeight - newHeight);
                         break;
                     case 'bottom-right':
-                        newWidth = Math.max(400, startWidth + deltaX);
-                        newHeight = Math.max(42, startHeight + deltaY);
+                        newWidth = Math.max(minWidth, startWidth + deltaX);
+                        newHeight = Math.max(minHeight, startHeight + deltaY);
                         break;
                     case 'bottom-left':
-                        newWidth = Math.max(400, startWidth - deltaX);
-                        newHeight = Math.max(42, startHeight + deltaY);
+                        newWidth = Math.max(minWidth, startWidth - deltaX);
+                        newHeight = Math.max(minHeight, startHeight + deltaY);
                         newX = startWindowX + (startWidth - newWidth);
                         break;
                     case 'top-right':
-                        newWidth = Math.max(400, startWidth + deltaX);
-                        newHeight = Math.max(42, startHeight - deltaY);
+                        newWidth = Math.max(minWidth, startWidth + deltaX);
+                        newHeight = Math.max(minHeight, startHeight - deltaY);
                         newY = startWindowY + (startHeight - newHeight);
                         break;
                     case 'top-left':
-                        newWidth = Math.max(400, startWidth - deltaX);
-                        newHeight = Math.max(42, startHeight - deltaY);
+                        newWidth = Math.max(minWidth, startWidth - deltaX);
+                        newHeight = Math.max(minHeight, startHeight - deltaY);
                         newX = startWindowX + (startWidth - newWidth);
                         newY = startWindowY + (startHeight - newHeight);
                         break;
@@ -455,7 +457,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load passthrough keybind text
     loadPassthroughKeybind();
-
 
     // Listen for the passthrough toggle event from the main process
     window.electronAPI.onTogglePassthrough((isIgnoring) => {

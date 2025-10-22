@@ -543,7 +543,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             for (const timestamp of logDirs) {
                 try {
                     const userDataPath = path.join('./logs', timestamp.toString(), 'allUserData.json');
-                    const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+                    let userData = {};
+                    try {
+                        await fsPromises.access(userDataPath);
+                        userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+                    } catch (error) {
+                        // allUserData.json doesn't exist, skip this fight
+                        logger.warn(`Skipping fight ${timestamp}: allUserData.json not found`);
+                        continue;
+                    }
 
                     for (const [uid, user] of Object.entries(userData)) {
                         totalDamage += user.total_damage?.total || 0;
@@ -589,7 +597,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             }
 
             const userDataPath = path.join('./logs', timestamp, 'allUserData.json');
-            const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+            let userData = {};
+            try {
+                await fsPromises.access(userDataPath);
+                userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+            } catch (error) {
+                // allUserData.json doesn't exist, skip this fight
+                logger.warn(`Skipping fight ${timestamp}: allUserData.json not found`);
+                return;
+            }
 
             let processedUserData = userData;
 
@@ -776,17 +792,17 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 index: index,
                 name: device.name,
                 description: device.description || device.name,
-                addresses: device.addresses
+                addresses: device.addresses,
             }));
             res.json({
                 code: 0,
-                data: adapters
+                data: adapters,
             });
         } catch (error) {
             logger.error('Failed to get network adapters:', error);
             res.status(500).json({
                 code: 1,
-                msg: 'Failed to get network adapters'
+                msg: 'Failed to get network adapters',
             });
         }
     });
@@ -801,8 +817,8 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 res.json({
                     code: 0,
                     data: {
-                        selectedAdapter: settings.selectedAdapter || 'auto'
-                    }
+                        selectedAdapter: settings.selectedAdapter || 'auto',
+                    },
                 });
             } catch (error) {
                 if (error.code === 'ENOENT') {
@@ -810,8 +826,8 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     res.json({
                         code: 0,
                         data: {
-                            selectedAdapter: 'auto'
-                        }
+                            selectedAdapter: 'auto',
+                        },
                     });
                 } else {
                     throw error;
@@ -821,7 +837,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             logger.error('Failed to get selected network adapter:', error);
             res.status(500).json({
                 code: 1,
-                msg: 'Failed to get selected network adapter'
+                msg: 'Failed to get selected network adapter',
             });
         }
     });
@@ -833,7 +849,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             const settingsPath = path.join('./networkSettings.json');
 
             const settings = {
-                selectedAdapter: selectedAdapter
+                selectedAdapter: selectedAdapter,
             };
 
             await fsPromises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
@@ -843,13 +859,13 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             res.json({
                 code: 0,
                 msg: 'Network adapter setting updated. Please restart the application for changes to take effect.',
-                data: settings
+                data: settings,
             });
         } catch (error) {
             logger.error('Failed to set selected network adapter:', error);
             res.status(500).json({
                 code: 1,
-                msg: 'Failed to set selected network adapter'
+                msg: 'Failed to set selected network adapter',
             });
         }
     });

@@ -172,7 +172,7 @@ body {
     /* Space out the main elements if desired, or keep them close */
     justify-content: flex-start; /* or space-between, depending on desired look */
     /* Ensure the group has a maximum width if it's currently overflowing */
-    /* max-width: 100%; */
+    max-width: 100%;
 }
 
 .button-group button {
@@ -216,7 +216,6 @@ body {
     -webkit-app-region: no-drag;
     display: flex;
     align-items: center;
-    flex-grow: 1;
     gap: 6px;
     padding: 4px 8px;
     background: rgba(255, 255, 255, 0.05);
