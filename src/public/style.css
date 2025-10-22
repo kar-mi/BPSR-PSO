@@ -161,9 +161,18 @@ body {
 }
 
 .button-group {
-    -webkit-app-region: no-drag;
+    /* Use Flexbox for alignment */
     display: flex;
-    gap: 8px;
+    /* Allow items to wrap to the next line if space runs out */
+    flex-wrap: wrap;
+    /* Align items to the center vertically */
+    align-items: center;
+    /* Add some gap between the elements */
+    gap: 10px;
+    /* Space out the main elements if desired, or keep them close */
+    justify-content: flex-start; /* or space-between, depending on desired look */
+    /* Ensure the group has a maximum width if it's currently overflowing */
+    /* max-width: 100%; */
 }
 
 .button-group button {
@@ -196,6 +205,8 @@ body {
 #closeButton {
     background-color: rgba(255, 0, 0, 0.4);
     border-color: rgba(255, 0, 0, 0.6);
+    flex-shrink: 0;
+    margin-left: auto;
 }
 #closeButton:hover {
     background-color: rgba(255, 0, 0, 0.6);
@@ -205,6 +216,7 @@ body {
     -webkit-app-region: no-drag;
     display: flex;
     align-items: center;
+    flex-grow: 1;
     gap: 6px;
     padding: 4px 8px;
     background: rgba(255, 255, 255, 0.05);
@@ -1031,6 +1043,7 @@ body {
     border-radius: 6px;
     font-size: 11px;
     cursor: pointer;
+    flex-shrink: 1;
     font-family: 'Roboto Condensed', sans-serif;
     transition: background-color 0.2s ease;
 }

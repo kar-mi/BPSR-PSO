@@ -23,6 +23,11 @@ let globalSettings = {
 };
 
 class Server {
+    constructor() {
+        // Track intervals for cleanup
+        this.intervals = [];
+    }
+
     start = async () =>
         new Promise(async (resolve, reject) => {
             try {
@@ -63,6 +68,10 @@ class Server {
                 // Stop user data manager intervals to prevent new log messages
                 userDataManager.stop();
 
+                // Clear server intervals to prevent memory leaks
+                this.intervals.forEach((interval) => clearInterval(interval));
+                this.intervals = [];
+
                 // Save user cache
                 await userDataManager.forceUserCacheSave();
 
@@ -81,13 +90,15 @@ class Server {
     }
 
     _configureSocketEmitter() {
-        setInterval(() => {
+        // Memory leak fix: Track interval for cleanup
+        const interval = setInterval(() => {
             if (!isPaused) {
                 userDataManager.updateAllRealtimeDps();
                 const userData = userDataManager.getAllUsersData();
                 socket.emit('data', { code: 0, user: userData });
             }
         }, 100);
+        this.intervals.push(interval);
     }
 
     _configureSocketListener() {

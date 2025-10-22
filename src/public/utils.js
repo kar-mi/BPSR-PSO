@@ -145,6 +145,64 @@ export function initializeOpacitySlider(sliderId, storageKey, cssVarName = '--ma
 }
 
 // ============================================================================
+// STAT DATA UTILITIES
+// ============================================================================
+
+/**
+ * Safely extract total value from stat object or nested total property
+ * Consolidates the pattern: user.total_damage?.total || 0
+ * @param {Object|number} statData - Stat data object or number
+ * @param {string} [property='total'] - Property to extract
+ * @param {number} [defaultValue=0] - Default value if not found
+ * @returns {number} Extracted value or default
+ */
+export function getStatValue(statData, property = 'total', defaultValue = 0) {
+    if (statData === null || statData === undefined) {
+        return defaultValue;
+    }
+    if (typeof statData === 'number') {
+        return statData;
+    }
+    if (typeof statData === 'object' && property in statData) {
+        return statData[property] ?? defaultValue;
+    }
+    return defaultValue;
+}
+
+/**
+ * Parse stat data from various formats (object, string, or PowerShell-like format)
+ * Used in history.js to parse historical data
+ * @param {Object|string|number} data - Data to parse
+ * @returns {number} Parsed total value
+ */
+export function parseStatData(data) {
+    if (typeof data === 'object' && data !== null) {
+        return data.total || 0;
+    }
+
+    if (typeof data === 'string') {
+        try {
+            let str = data;
+            // Handle @{key=value;...} format (PowerShell-like)
+            if (str.startsWith('@{') && str.endsWith('}')) {
+                str = str
+                    .slice(2, -1)
+                    .replace(/(\w+)=/g, '"$1":')
+                    .replace(/;/g, ',');
+                str = '{' + str + '}';
+            }
+            const parsed = JSON.parse(str);
+            return parsed.total || 0;
+        } catch (e) {
+            console.warn('Failed to parse stat data:', data, e);
+            return 0;
+        }
+    }
+
+    return 0;
+}
+
+// ============================================================================
 // DATE/TIME UTILITIES
 // ============================================================================
 
@@ -203,4 +261,113 @@ export function filterSkillsByType(skills, type) {
         }
     }
     return filtered;
+}
+
+// ============================================================================
+// DATA RENDERING - SHARED BETWEEN SCRIPT.JS AND HISTORY.JS
+// ============================================================================
+
+/**
+ * Render user data list with DPS/HPS bars
+ * Consolidated function used by both main window and history window
+ * @param {Array} users - Array of user objects
+ * @param {Object} userColors - Map of user IDs to color shades
+ * @param {HTMLElement} container - Container element to render into
+ * @param {Object} options - Optional configuration
+ * @param {Function} options.onUserDoubleClick - Callback for double-click on user (history window)
+ * @returns {void}
+ */
+export function renderDataList(users, userColors, container, options = {}) {
+    // Early exit if no users
+    if (!users || users.length === 0) {
+        container.innerHTML = '';
+        return;
+    }
+
+    // Calculate totals and sort
+    const totalDamageOverall = users.reduce((sum, user) => sum + (user.total_damage?.total || 0), 0);
+    const totalHealingOverall = users.reduce((sum, user) => sum + (user.total_healing?.total || 0), 0);
+
+    users.sort((a, b) => (b.total_damage?.total || 0) - (a.total_damage?.total || 0));
+
+    // Pre-calculate reciprocals for percentage calculations (avoid division in loop)
+    const damageMultiplier = totalDamageOverall > 0 ? 100 / totalDamageOverall : 0;
+    const healingMultiplier = totalHealingOverall > 0 ? 100 / totalHealingOverall : 0;
+
+    // Use DocumentFragment for batch DOM insertion
+    const fragment = document.createDocumentFragment();
+
+    users.forEach((user, index) => {
+        const userId = user.id || user.uid;
+
+        if (!userColors[userId]) {
+            userColors[userId] = getNextColorShades();
+        }
+        const colors = userColors[userId];
+        const item = document.createElement('li');
+
+        item.className = 'data-item';
+
+        // Add data attributes for double-click handler (history window)
+        if (options.onUserDoubleClick) {
+            item.dataset.uid = userId;
+            item.dataset.userName = user.name;
+            item.dataset.userProfession = user.profession;
+            item.addEventListener('dblclick', () => {
+                options.onUserDoubleClick(userId, user.name, user.profession);
+            });
+        }
+
+        const damageTotal = user.total_damage?.total || 0;
+        const healingTotal = user.total_healing?.total || 0;
+        const damagePercent = damageTotal * damageMultiplier;
+        const healingPercent = healingTotal * healingMultiplier;
+
+        // Pre-format numbers to avoid multiple calls
+        const formattedDamageTotal = formatNumber(damageTotal);
+        const formattedDPS = formatNumber(user.total_dps || 0);
+        const damagePercentStr = damagePercent.toFixed(1);
+
+        // Use profession for display
+        const professionDisplay = user.profession || 'Unknown';
+        const displayName = user.fightPoint
+            ? `${user.name} ${options.showProfession !== false ? '- ' + professionDisplay : ''} (${user.fightPoint})`
+            : `${user.name}${options.showProfession !== false ? ' - ' + professionDisplay : ''}`;
+
+        const classIconHtml = getProfessionIconHtml(user.profession);
+
+        let subBarHtml = '';
+        if (healingTotal > 0 || (user.total_hps || 0) > 0) {
+            const formattedHealingTotal = formatNumber(healingTotal);
+            const formattedHPS = formatNumber(user.total_hps || 0);
+            const healingPercentStr = healingPercent.toFixed(1);
+
+            subBarHtml = `
+                <div class="sub-bar">
+                    <div class="hps-bar-fill" style="width: ${healingPercent}%; background-color: ${colors.hps};"></div>
+                    <div class="hps-stats">
+                       ${formattedHealingTotal} (${formattedHPS} HPS, ${healingPercentStr}%)
+                    </div>
+                </div>
+            `;
+        }
+
+        item.innerHTML = `
+            <div class="main-bar">
+                <div class="dps-bar-fill" style="width: ${damagePercent}%; background-color: ${colors.dps};"></div>
+                <div class="content">
+                    <span class="rank">${index + 1}.</span>
+                    ${classIconHtml}
+                    <span class="name">${displayName}</span>
+                    <span class="stats">${formattedDamageTotal} (${formattedDPS} DPS, ${damagePercentStr}%)</span>
+                </div>
+            </div>
+            ${subBarHtml}
+        `;
+        fragment.appendChild(item);
+    });
+
+    // Single DOM update
+    container.innerHTML = '';
+    container.appendChild(fragment);
 }

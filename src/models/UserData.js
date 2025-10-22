@@ -106,6 +106,33 @@ export class UserData {
         this.lastUpdateTime = Date.now();
     }
 
+    /**
+     * Track skill usage for both global and per-target tracking
+     * Consolidates duplicate logic from addDamage and addHealing
+     * @private
+     */
+    _trackSkillUsage(skillId, element, value, isCrit, isCauseLucky, hpLessenValue, targetUid, type) {
+        // Track global skill usage
+        if (!this.skillUsage.has(skillId)) {
+            this.skillUsage.set(skillId, new StatisticData(this, type, element));
+        }
+        this.skillUsage.get(skillId).addRecord(value, isCrit, isCauseLucky, hpLessenValue);
+        this.skillUsage.get(skillId).realtimeWindow.length = 0;
+
+        // Track per-target skill usage
+        if (targetUid !== null && targetUid !== undefined) {
+            if (!this.skillUsageByEnemy.has(skillId)) {
+                this.skillUsageByEnemy.set(skillId, new Map());
+            }
+            const targetMap = this.skillUsageByEnemy.get(skillId);
+            if (!targetMap.has(targetUid)) {
+                targetMap.set(targetUid, new StatisticData(this, type, element));
+            }
+            targetMap.get(targetUid).addRecord(value, isCrit, isCauseLucky, hpLessenValue);
+            targetMap.get(targetUid).realtimeWindow.length = 0;
+        }
+    }
+
     /** 添加伤害记录
      * @param {number} skillId - 技能ID/Buff ID
      * @param {string} element - 技能元素属性
@@ -119,25 +146,9 @@ export class UserData {
     addDamage(skillId, element, damage, isCrit, isLucky, isCauseLucky, hpLessenValue = 0, targetUid = null) {
         this._touch();
         this.damageStats.addRecord(damage, isCrit, isLucky, hpLessenValue);
-        // 记录技能使用情况
-        if (!this.skillUsage.has(skillId)) {
-            this.skillUsage.set(skillId, new StatisticData(this, '伤害', element));
-        }
-        this.skillUsage.get(skillId).addRecord(damage, isCrit, isCauseLucky, hpLessenValue);
-        this.skillUsage.get(skillId).realtimeWindow.length = 0;
 
-        // Track per-enemy skill usage
-        if (targetUid !== null && targetUid !== undefined) {
-            if (!this.skillUsageByEnemy.has(skillId)) {
-                this.skillUsageByEnemy.set(skillId, new Map());
-            }
-            const enemyMap = this.skillUsageByEnemy.get(skillId);
-            if (!enemyMap.has(targetUid)) {
-                enemyMap.set(targetUid, new StatisticData(this, '伤害', element));
-            }
-            enemyMap.get(targetUid).addRecord(damage, isCrit, isCauseLucky, hpLessenValue);
-            enemyMap.get(targetUid).realtimeWindow.length = 0;
-        }
+        // Track skill usage (consolidated)
+        this._trackSkillUsage(skillId, element, damage, isCrit, isCauseLucky, hpLessenValue, targetUid, '伤害');
 
         const subProfession = getSubProfessionBySkillId(skillId);
         if (subProfession) {
@@ -157,28 +168,12 @@ export class UserData {
     addHealing(skillId, element, healing, isCrit, isLucky, isCauseLucky, targetUid = null) {
         this._touch();
         this.healingStats.addRecord(healing, isCrit, isLucky);
-        // 记录技能使用情况
-        skillId = skillId + 1000000000;
-        if (!this.skillUsage.has(skillId)) {
-            this.skillUsage.set(skillId, new StatisticData(this, '治疗', element));
-        }
-        this.skillUsage.get(skillId).addRecord(healing, isCrit, isCauseLucky);
-        this.skillUsage.get(skillId).realtimeWindow.length = 0;
 
-        // Track per-target (player) healing
-        if (targetUid !== null && targetUid !== undefined) {
-            if (!this.skillUsageByEnemy.has(skillId)) {
-                this.skillUsageByEnemy.set(skillId, new Map());
-            }
-            const targetMap = this.skillUsageByEnemy.get(skillId);
-            if (!targetMap.has(targetUid)) {
-                targetMap.set(targetUid, new StatisticData(this, '治疗', element));
-            }
-            targetMap.get(targetUid).addRecord(healing, isCrit, isCauseLucky);
-            targetMap.get(targetUid).realtimeWindow.length = 0;
-        }
+        // Track skill usage (consolidated) - offset healing skills by 1 billion
+        const healingSkillId = skillId + 1000000000;
+        this._trackSkillUsage(healingSkillId, element, healing, isCrit, isCauseLucky, 0, targetUid, '治疗');
 
-        const subProfession = getSubProfessionBySkillId(skillId - 1000000000);
+        const subProfession = getSubProfessionBySkillId(skillId);
         if (subProfession) {
             this.setSubProfession(subProfession);
         }
@@ -258,31 +253,36 @@ export class UserData {
         return summary;
     }
 
+    /**
+     * Build skill summary object from StatisticData
+     * Shared helper to avoid code duplication
+     * @private
+     */
+    _buildSkillSummary(skillId, stat) {
+        const critRate = stat.count.total > 0 ? stat.count.critical / stat.count.total : 0;
+        const luckyRate = stat.count.total > 0 ? stat.count.lucky / stat.count.total : 0;
+        const name = skillConfig[skillId % 1000000000] ?? skillId % 1000000000;
+
+        return {
+            displayName: name,
+            type: stat.type,
+            elementype: stat.element,
+            totalDamage: stat.stats.total,
+            totalCount: stat.count.total,
+            critCount: stat.count.critical,
+            luckyCount: stat.count.lucky,
+            critRate: critRate,
+            luckyRate: luckyRate,
+            damageBreakdown: { ...stat.stats },
+            countBreakdown: { ...stat.count },
+        };
+    }
+
     /** 获取技能统计数据 */
     getSkillSummary() {
         const skills = {};
         for (const [skillId, stat] of this.skillUsage) {
-            const total = stat.stats.normal + stat.stats.critical + stat.stats.lucky + stat.stats.crit_lucky;
-            const critCount = stat.count.critical;
-            const luckyCount = stat.count.lucky;
-            const critRate = stat.count.total > 0 ? critCount / stat.count.total : 0;
-            const luckyRate = stat.count.total > 0 ? luckyCount / stat.count.total : 0;
-            const name = skillConfig[skillId % 1000000000] ?? skillId % 1000000000;
-            const elementype = stat.element;
-
-            skills[skillId] = {
-                displayName: name,
-                type: stat.type,
-                elementype: elementype,
-                totalDamage: stat.stats.total,
-                totalCount: stat.count.total,
-                critCount: stat.count.critical,
-                luckyCount: stat.count.lucky,
-                critRate: critRate,
-                luckyRate: luckyRate,
-                damageBreakdown: { ...stat.stats },
-                countBreakdown: { ...stat.count },
-            };
+            skills[skillId] = this._buildSkillSummary(skillId, stat);
         }
         return skills;
     }
@@ -302,22 +302,7 @@ export class UserData {
                 const stat = enemyMap.get(enemyId);
                 if (!stat) continue; // Skip if no data for this enemy
 
-                const critRate = stat.count.total > 0 ? stat.count.critical / stat.count.total : 0;
-                const luckyRate = stat.count.total > 0 ? stat.count.lucky / stat.count.total : 0;
-
-                skills[skillId] = {
-                    displayName: name,
-                    type: stat.type,
-                    elementype: stat.element,
-                    totalDamage: stat.stats.total,
-                    totalCount: stat.count.total,
-                    critCount: stat.count.critical,
-                    luckyCount: stat.count.lucky,
-                    critRate: critRate,
-                    luckyRate: luckyRate,
-                    damageBreakdown: { ...stat.stats },
-                    countBreakdown: { ...stat.count },
-                };
+                skills[skillId] = this._buildSkillSummary(skillId, stat);
             } else {
                 // Return all skills with all enemy data aggregated
                 skills[skillId] = {
@@ -326,21 +311,7 @@ export class UserData {
                 };
 
                 for (const [targetId, stat] of enemyMap) {
-                    const critRate = stat.count.total > 0 ? stat.count.critical / stat.count.total : 0;
-                    const luckyRate = stat.count.total > 0 ? stat.count.lucky / stat.count.total : 0;
-
-                    skills[skillId].enemies[targetId] = {
-                        type: stat.type,
-                        elementype: stat.element,
-                        totalDamage: stat.stats.total,
-                        totalCount: stat.count.total,
-                        critCount: stat.count.critical,
-                        luckyCount: stat.count.lucky,
-                        critRate: critRate,
-                        luckyRate: luckyRate,
-                        damageBreakdown: { ...stat.stats },
-                        countBreakdown: { ...stat.count },
-                    };
+                    skills[skillId].enemies[targetId] = this._buildSkillSummary(skillId, stat);
                 }
             }
         }

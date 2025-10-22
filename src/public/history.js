@@ -6,6 +6,8 @@ import {
     getProfessionIconHtml,
     initializeOpacitySlider,
     formatDateForInput,
+    renderDataList,
+    parseStatData,
 } from './utils.js';
 
 // State variables
@@ -84,93 +86,12 @@ function openSkillBreakdown(uid, userName, userProfession) {
     }
 }
 
-function renderDataList(users) {
-    // Early exit if no users
-    if (users.length === 0) {
-        columnsContainer.innerHTML = '';
-        return;
-    }
-
-    const totalDamageOverall = users.reduce((sum, user) => sum + user.total_damage.total, 0);
-    const totalHealingOverall = users.reduce((sum, user) => sum + user.total_healing.total, 0);
-
-    users.sort((a, b) => b.total_damage.total - a.total_damage.total);
-
-    // Pre-calculate multipliers to avoid division in loop
-    const damageMultiplier = totalDamageOverall > 0 ? 100 / totalDamageOverall : 0;
-    const healingMultiplier = totalHealingOverall > 0 ? 100 / totalHealingOverall : 0;
-
-    // Use DocumentFragment for batch DOM insertion
-    const fragment = document.createDocumentFragment();
-
-    users.forEach((user, index) => {
-        if (!userColors[user.id]) {
-            userColors[user.id] = getNextColorShades();
-        }
-        const colors = userColors[user.id];
-        const item = document.createElement('li');
-
-        item.className = 'data-item';
-        item.dataset.uid = user.id || user.uid; // Store UID for double-click handler
-        item.dataset.userName = user.name;
-        item.dataset.userProfession = user.profession;
-
-        // Add double-click handler to open skill breakdown
-        item.addEventListener('dblclick', () => {
-            openSkillBreakdown(user.id || user.uid, user.name, user.profession);
-        });
-
-        const damagePercent = user.total_damage.total * damageMultiplier;
-        const healingPercent = user.total_healing.total * healingMultiplier;
-
-        // Pre-format numbers once
-        const formattedDamageTotal = formatNumber(user.total_damage.total);
-        const formattedDPS = formatNumber(user.total_dps);
-        const damagePercentStr = damagePercent.toFixed(1);
-
-        const displayName = user.fightPoint ? `${user.name} (${user.fightPoint})` : user.name;
-
-        const classIconHtml = getProfessionIconHtml(user.profession);
-
-        let subBarHtml = '';
-        if (user.total_healing.total > 0 || user.total_hps > 0) {
-            const formattedHealingTotal = formatNumber(user.total_healing.total);
-            const formattedHPS = formatNumber(user.total_hps);
-            const healingPercentStr = healingPercent.toFixed(1);
-
-            subBarHtml = `
-                <div class="sub-bar">
-                    <div class="hps-bar-fill" style="width: ${healingPercent}%; background-color: ${colors.hps};"></div>
-                    <div class="hps-stats">
-                       ${formattedHealingTotal} (${formattedHPS} HPS, ${healingPercentStr}%)
-                    </div>
-                </div>
-            `;
-        }
-
-        item.innerHTML = `
-            <div class="main-bar">
-                <div class="dps-bar-fill" style="width: ${damagePercent}%; background-color: ${colors.dps};"></div>
-                <div class="content">
-                    <span class="rank">${index + 1}.</span>
-                    ${classIconHtml}
-                    <span class="name">${displayName}</span>
-                    <span class="stats">${formattedDamageTotal} (${formattedDPS} DPS, ${damagePercentStr}%)</span>
-                </div>
-            </div>
-            ${subBarHtml}
-        `;
-        fragment.appendChild(item);
-    });
-
-    // Single DOM update
-    columnsContainer.innerHTML = '';
-    columnsContainer.appendChild(fragment);
-}
-
 function updateAll() {
     const usersArray = Object.values(allUsers).filter((user) => user.total_dps > 0 || user.total_hps > 0);
-    renderDataList(usersArray);
+    renderDataList(usersArray, userColors, columnsContainer, {
+        onUserDoubleClick: openSkillBreakdown,
+        showProfession: false, // Don't show profession in history view
+    });
 }
 
 // Initialize the history window
@@ -422,34 +343,6 @@ function renderFightList() {
     });
 }
 
-// Helper function to parse stat data (object or string format)
-function parseStatData(data) {
-    if (typeof data === 'object' && data !== null) {
-        return data.total || 0;
-    }
-
-    if (typeof data === 'string') {
-        try {
-            let str = data;
-            // Handle @{key=value;...} format
-            if (str.startsWith('@{') && str.endsWith('}')) {
-                str = str
-                    .slice(2, -1)
-                    .replace(/(\w+)=/g, '"$1":')
-                    .replace(/;/g, ',');
-                str = '{' + str + '}';
-            }
-            const parsed = JSON.parse(str);
-            return parsed.total || 0;
-        } catch (e) {
-            console.warn('Failed to parse stat data:', data, e);
-            return 0;
-        }
-    }
-
-    return 0;
-}
-
 // Render fight details table with statistics
 function renderFightDetailsTable() {
     if (!allUsers || Object.keys(allUsers).length === 0) {
@@ -461,6 +354,22 @@ function renderFightDetailsTable() {
     const isDamage = currentDataType === 'damage';
     const isHealing = currentDataType === 'healing';
     const isTanking = currentDataType === 'tanking';
+
+    // Pre-calculate and cache rates for each user to avoid redundant calculations
+    users.forEach(user => {
+        const totalCount = user.total_count?.total || 0;
+        if (!user._cachedRates || user._cachedRatesCount !== totalCount) {
+            const critCount = user.total_count?.critical || 0;
+            const luckyCount = user.total_count?.lucky || 0;
+            user._cachedRates = {
+                crit: totalCount > 0 ? critCount / totalCount : 0,
+                lucky: totalCount > 0 ? luckyCount / totalCount : 0,
+                critPercent: totalCount > 0 ? ((critCount / totalCount) * 100).toFixed(1) : '0.0',
+                luckyPercent: totalCount > 0 ? ((luckyCount / totalCount) * 100).toFixed(1) : '0.0',
+            };
+            user._cachedRatesCount = totalCount;
+        }
+    });
 
     // Calculate totals for percentage
     const totalValue = users.reduce((sum, user) => {
@@ -524,21 +433,15 @@ function renderFightDetailsTable() {
                 break;
 
             case 'crit':
-                const aTotalCount = a.total_count?.total || 0;
-                const aCritCount = a.total_count?.critical || 0;
-                aValue = aTotalCount > 0 ? aCritCount / aTotalCount : 0;
-                const bTotalCount = b.total_count?.total || 0;
-                const bCritCount = b.total_count?.critical || 0;
-                bValue = bTotalCount > 0 ? bCritCount / bTotalCount : 0;
+                // Use cached rates instead of recalculating
+                aValue = a._cachedRates?.crit || 0;
+                bValue = b._cachedRates?.crit || 0;
                 break;
 
             case 'lucky':
-                const aTotalCount2 = a.total_count?.total || 0;
-                const aLuckyCount = a.total_count?.lucky || 0;
-                aValue = aTotalCount2 > 0 ? aLuckyCount / aTotalCount2 : 0;
-                const bTotalCount2 = b.total_count?.total || 0;
-                const bLuckyCount = b.total_count?.lucky || 0;
-                bValue = bTotalCount2 > 0 ? bLuckyCount / bTotalCount2 : 0;
+                // Use cached rates instead of recalculating
+                aValue = a._cachedRates?.lucky || 0;
+                bValue = b._cachedRates?.lucky || 0;
                 break;
 
             default: // rank or dps (default)
@@ -608,13 +511,9 @@ function renderFightDetailsTable() {
         const percentage = totalValue > 0 ? ((total / totalValue) * 100).toFixed(1) : '0.0';
         const percentageNum = parseFloat(percentage);
 
-        // Calculate crit and lucky percentages (only for damage/healing)
-        const totalCount = user.total_count?.total || 0;
-        const critCount = user.total_count?.critical || 0;
-        const luckyCount = user.total_count?.lucky || 0;
-
-        const critPercent = totalCount > 0 ? ((critCount / totalCount) * 100).toFixed(1) : '0.0';
-        const luckyPercent = totalCount > 0 ? ((luckyCount / totalCount) * 100).toFixed(1) : '0.0';
+        // Use cached crit and lucky percentages (only for damage/healing)
+        const critPercent = user._cachedRates?.critPercent || '0.0';
+        const luckyPercent = user._cachedRates?.luckyPercent || '0.0';
 
         // Get or assign color for this user
         if (!userColors[user.id]) {

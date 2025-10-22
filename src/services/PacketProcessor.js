@@ -803,7 +803,8 @@ export class PacketProcessor {
                 }
             }
         } catch (e) {
-            // A try-catch block here is helpful for parsing issues
+            // Security: Log packet parsing errors for debugging
+            logger.debug(`Packet parsing error: ${e.message}`);
         }
     }
 }

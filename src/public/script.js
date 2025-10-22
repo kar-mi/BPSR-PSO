@@ -4,6 +4,7 @@ import {
     formatNumber,
     getProfessionIconHtml,
     initializeOpacitySlider,
+    renderDataList,
 } from './utils.js';
 
 // DOM elements - will be initialized after DOMContentLoaded
@@ -27,89 +28,9 @@ const MAX_RECONNECT_INTERVAL = 30000; // Cap backoff at 30s
 let encounterStartTime = null;
 let timerInterval = null;
 
-function renderDataList(users) {
-    // Early exit if no users
-    if (users.length === 0) {
-        columnsContainer.innerHTML = '';
-        return;
-    }
-
-    // Calculate totals and sort
-    const totalDamageOverall = users.reduce((sum, user) => sum + user.total_damage.total, 0);
-    const totalHealingOverall = users.reduce((sum, user) => sum + user.total_healing.total, 0);
-
-    users.sort((a, b) => b.total_damage.total - a.total_damage.total);
-
-    // Pre-calculate reciprocals for percentage calculations (avoid division in loop)
-    const damageMultiplier = totalDamageOverall > 0 ? 100 / totalDamageOverall : 0;
-    const healingMultiplier = totalHealingOverall > 0 ? 100 / totalHealingOverall : 0;
-
-    // Use DocumentFragment for batch DOM insertion
-    const fragment = document.createDocumentFragment();
-
-    users.forEach((user, index) => {
-        if (!userColors[user.id]) {
-            userColors[user.id] = getNextColorShades();
-        }
-        const colors = userColors[user.id];
-        const item = document.createElement('li');
-
-        item.className = 'data-item';
-        const damagePercent = user.total_damage.total * damageMultiplier;
-        const healingPercent = user.total_healing.total * healingMultiplier;
-
-        // Pre-format numbers to avoid multiple calls
-        const formattedDamageTotal = formatNumber(user.total_damage.total);
-        const formattedDPS = formatNumber(user.total_dps);
-        const damagePercentStr = damagePercent.toFixed(1);
-
-        // Use profession for display, not subProfession
-        const professionDisplay = user.profession || 'Unknown';
-        const displayName = user.fightPoint
-            ? `${user.name} - ${professionDisplay} (${user.fightPoint})`
-            : `${user.name} - ${professionDisplay}`;
-
-        const classIconHtml = getProfessionIconHtml(user.profession);
-
-        let subBarHtml = '';
-        if (user.total_healing.total > 0 || user.total_hps > 0) {
-            const formattedHealingTotal = formatNumber(user.total_healing.total);
-            const formattedHPS = formatNumber(user.total_hps);
-            const healingPercentStr = healingPercent.toFixed(1);
-
-            subBarHtml = `
-                <div class="sub-bar">
-                    <div class="hps-bar-fill" style="width: ${healingPercent}%; background-color: ${colors.hps};"></div>
-                    <div class="hps-stats">
-                       ${formattedHealingTotal} (${formattedHPS} HPS, ${healingPercentStr}%)
-                    </div>
-                </div>
-            `;
-        }
-
-        item.innerHTML = `
-            <div class="main-bar">
-                <div class="dps-bar-fill" style="width: ${damagePercent}%; background-color: ${colors.dps};"></div>
-                <div class="content">
-                    <span class="rank">${index + 1}.</span>
-                    ${classIconHtml}
-                    <span class="name">${displayName}</span>
-                    <span class="stats">${formattedDamageTotal} (${formattedDPS} DPS, ${damagePercentStr}%)</span>
-                </div>
-            </div>
-            ${subBarHtml}
-        `;
-        fragment.appendChild(item);
-    });
-
-    // Single DOM update
-    columnsContainer.innerHTML = '';
-    columnsContainer.appendChild(fragment);
-}
-
 function updateAll() {
     const usersArray = Object.values(allUsers).filter((user) => user.total_dps > 0 || user.total_hps > 0);
-    renderDataList(usersArray);
+    renderDataList(usersArray, userColors, columnsContainer);
 }
 
 function processDataUpdate(data) {
