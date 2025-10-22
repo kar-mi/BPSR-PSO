@@ -10,8 +10,10 @@ const iconPath = path.join(__dirname, '../resources/app.ico');
 const preloadPath = path.join(__dirname, '../preload.js');
 const historyHtmlPath = path.join(__dirname, '../public/history.html');
 const skillsHtmlPath = path.join(__dirname, '../public/skills.html');
+const settingsHtmlPath = path.join(__dirname, '../public/settings.html');
 
 let historyWindow = null;
+let settingsWindow = null;
 let skillWindows = {}; // Store multiple skill windows by UID
 
 ipcMain.on('close-client', (event) => {
@@ -76,6 +78,42 @@ ipcMain.on('refresh-history-window', () => {
     if (historyWindow && !historyWindow.isDestroyed()) {
         historyWindow.webContents.send('history-data-updated');
     }
+});
+
+ipcMain.on('open-settings-window', async (event) => {
+    if (settingsWindow && !settingsWindow.isDestroyed()) {
+        settingsWindow.focus();
+        return;
+    }
+
+    const mainWindow = BrowserWindow.fromWebContents(event.sender);
+
+    settingsWindow = new BrowserWindow({
+        width: 800,
+        height: 600,
+        minWidth: 600,
+        minHeight: 400,
+        transparent: true,
+        frame: false,
+        title: 'Settings - BPSR-PSO',
+        icon: iconPath,
+        webPreferences: {
+            preload: preloadPath,
+            contextIsolation: true,
+            nodeIntegration: false,
+        },
+        autoMenuBar: false,
+        parent: mainWindow,
+        modal: false,
+    });
+
+    settingsWindow.setAlwaysOnTop(true, 'normal');
+    settingsWindow.setMovable(true);
+    settingsWindow.loadFile(settingsHtmlPath);
+
+    settingsWindow.on('closed', () => {
+        settingsWindow = null;
+    });
 });
 
 ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId }) => {

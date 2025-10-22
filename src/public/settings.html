@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Settings - BPSR-PSO</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="style.css" />
+        <link rel="stylesheet" href="settings.css" />
+    </head>
+    <body>
+        <div id="app-wrapper">
+            <div class="main-container">
+                <div class="controls">
+                    <div class="title-container">
+                        <span class="app-title">Settings</span>
+                    </div>
+                    <div class="button-group">
+                        <div class="opacity-control">
+                            <label for="settingsOpacitySlider">Opacity</label>
+                            <input
+                                type="range"
+                                id="settingsOpacitySlider"
+                                min="0"
+                                max="1"
+                                step="0.05"
+                                value="0.05"
+                                title="Adjust Window Opacity"
+                            />
+                        </div>
+                        <button id="closeButton" title="Close Window">X</button>
+                    </div>
+                </div>
+                <div class="settings-tabs">
+                    <button class="tab-button active" data-tab="general">General</button>
+                    <button class="tab-button" data-tab="network">Network</button>
+                    <button class="tab-button" data-tab="keybinds">Keybinds</button>
+                </div>
+                <div class="settings-content">
+                    <!-- General Settings Tab -->
+                    <div id="general-tab" class="tab-content active">
+                        <div class="settings-section">
+                            <h3>Fight Settings</h3>
+                            <div class="settings-option">
+                                <label for="timeoutSlider">Fight Timeout (seconds)</label>
+                                <input type="range" id="timeoutSlider" min="5" max="60" step="1" value="15" />
+                                <span id="timeoutValue">15</span>
+                            </div>
+                            <div class="settings-option-description">
+                                Time to wait before automatically clearing statistics after no activity.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Network Settings Tab -->
+                    <div id="network-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h3>Network Adapter</h3>
+                            <div class="settings-option">
+                                <label for="networkAdapter">Selected Adapter</label>
+                                <div class="network-adapter-group">
+                                    <select id="networkAdapter">
+                                        <option value="auto">Auto-detect</option>
+                                        <!-- Network adapters will be populated by JS -->
+                                    </select>
+                                    <button id="refreshAdapters" class="icon-button" title="Refresh Network Adapters">🔄</button>
+                                </div>
+                            </div>
+                            <div class="settings-option-description">
+                                Select which network adapter to monitor for game traffic. Auto-detect will automatically find the correct adapter.
+                            </div>
+                            <div class="settings-option-warning">
+                                ⚠️ Restart required after changing network adapter.
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Keybinds Settings Tab -->
+                    <div id="keybinds-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h3>Keyboard Shortcuts</h3>
+                            <div class="settings-option-description">
+                                Click on any shortcut to remap it. Press the desired key combination to set a new shortcut.
+                            </div>
+                            <div id="keybindList" class="keybind-list">
+                                <!-- Keybinds will be populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script type="module" src="settings.js"></script>
+    </body>
+</html>

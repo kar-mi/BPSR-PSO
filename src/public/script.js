@@ -7,10 +7,10 @@ import {
 } from './utils.js';
 
 // DOM elements - will be initialized after DOMContentLoaded
-let columnsContainer, settingsContainer, helpContainer, passthroughTitle, passthroughKeybind, encounterTimer;
+let columnsContainer, helpContainer, passthroughTitle, passthroughKeybind, encounterTimer;
 let pauseButton, clearButton, helpButton, settingsButton, closeButton;
-let allButtons, keybindList;
-let historyButton, timeoutSlider, timeoutValue;
+let allButtons;
+let historyButton;
 
 let allUsers = {};
 let userColors = {};
@@ -26,13 +26,6 @@ const MAX_RECONNECT_INTERVAL = 30000; // Cap backoff at 30s
 //Timer
 let encounterStartTime = null;
 let timerInterval = null;
-
-// Keybind management
-let currentKeybinds = {};
-let keybindMap = new Map(); // Optimized lookup for keybind validation
-let isRecordingKeybind = false;
-let currentRecordingElement = null;
-let keybindEventListeners = new Map(); // Track event listeners for cleanup
 
 function renderDataList(users) {
     // Early exit if no users
@@ -319,16 +312,8 @@ function initialize() {
 }
 
 function toggleSettings() {
-    const isSettingsVisible = !settingsContainer.classList.contains('hidden');
-
-    if (isSettingsVisible) {
-        settingsContainer.classList.add('hidden');
-        columnsContainer.classList.remove('hidden');
-    } else {
-        settingsContainer.classList.remove('hidden');
-        columnsContainer.classList.add('hidden');
-        helpContainer.classList.add('hidden'); // Also hide help
-    }
+    // Open settings window using Electron API
+    window.electronAPI.openSettingsWindow();
 }
 
 function toggleHelp() {
@@ -339,60 +324,9 @@ function toggleHelp() {
     } else {
         helpContainer.classList.remove('hidden');
         columnsContainer.classList.add('hidden');
-        settingsContainer.classList.add('hidden'); // Also hide settings
     }
 }
 
-//history functions
-function updateTimeoutValue() {
-    console.log('Updating timeout display to:', timeoutSlider.value);
-    timeoutValue.textContent = timeoutSlider.value;
-}
-
-async function loadInitialTimeout() {
-    try {
-        const response = await fetch(`http://${SERVER_URL}/api/fight/timeout`);
-        if (response.ok) {
-            const result = await response.json();
-            if (result.code === 0) {
-                const timeoutSeconds = result.timeout / 1000; // Convert from ms to seconds
-                timeoutSlider.value = timeoutSeconds;
-                updateTimeoutValue();
-                console.log(`Loaded initial timeout: ${timeoutSeconds}s`);
-            }
-        } else {
-            console.error('Failed to load initial timeout:', response.status);
-            // Use default value if server fails
-            updateTimeoutValue();
-        }
-    } catch (error) {
-        console.error('Error loading initial timeout:', error);
-        // Use default value if request fails
-        updateTimeoutValue();
-    }
-}
-
-async function updateFightTimeout(seconds) {
-    try {
-        console.log(`Updating fight timeout to ${seconds} seconds (${seconds * 1000}ms)`);
-        const response = await fetch(`http://${SERVER_URL}/api/fight/timeout`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ timeout: seconds * 1000 }), // Convert to milliseconds
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log(`Fight timeout updated successfully:`, result);
-        } else {
-            console.error('Failed to update fight timeout:', response.status, response.statusText);
-        }
-    } catch (error) {
-        console.error('Error updating fight timeout:', error);
-    }
-}
 
 //Encounter Timer
 /**
@@ -461,205 +395,20 @@ function toggleHistory() {
     window.electronAPI.openHistoryWindow();
 }
 
-// Keybind management functions
-async function loadKeybinds() {
+// Load and display the passthrough keybind text
+async function loadPassthroughKeybind() {
     try {
-        currentKeybinds = await window.electronAPI.getKeybinds();
-
-        // Sync keybindMap for O(1) lookups
-        keybindMap.clear();
-        Object.entries(currentKeybinds).forEach(([name, shortcut]) => {
-            keybindMap.set(name, shortcut);
-        });
-
-        renderKeybindList();
-    } catch (error) {
-        console.error('Failed to load keybinds:', error);
-    }
-}
-
-function renderKeybindList() {
-    // Clean up old event listeners
-    keybindEventListeners.forEach((listener, element) => {
-        element.removeEventListener('click', listener);
-    });
-    keybindEventListeners.clear();
-
-    keybindList.innerHTML = '';
-
-    const keybindLabels = {
-        togglePassthrough: 'Toggle Mouse Pass-through',
-        minimizeWindow: 'Minimize Window Content',
-        resizeUp: 'Resize Window Up',
-        resizeDown: 'Resize Window Down',
-        resizeLeft: 'Resize Window Left',
-        resizeRight: 'Resize Window Right',
-        moveUp: 'Move Window Up',
-        moveDown: 'Move Window Down',
-        moveLeft: 'Move Window Left',
-        moveRight: 'Move Window Right',
-        pauseResume: 'Pause/Resume Statistics',
-        clearData: 'Clear Data',
-    };
-
-    Object.entries(currentKeybinds).forEach(([keybindName, shortcut]) => {
-        const item = document.createElement('div');
-        item.className = 'keybind-item';
-
-        const label = document.createElement('span');
-        label.className = 'keybind-label';
-        label.textContent = keybindLabels[keybindName] || keybindName;
-
-        const shortcutElement = document.createElement('span');
-        shortcutElement.className = 'keybind-shortcut';
-        shortcutElement.textContent = shortcut;
-        shortcutElement.dataset.keybindName = keybindName;
-
-        // Create listener and store it for cleanup
-        const clickListener = () => startRecordingKeybind(keybindName, shortcutElement);
-        shortcutElement.addEventListener('click', clickListener);
-        keybindEventListeners.set(shortcutElement, clickListener);
-
-        item.appendChild(label);
-        item.appendChild(shortcutElement);
-        keybindList.appendChild(item);
-    });
-
-    setPassthroughKeybindText();
-}
-
-async function startRecordingKeybind(keybindName, element) {
-    if (isRecordingKeybind) {
-        await stopRecordingKeybind();
-    }
-
-    isRecordingKeybind = true;
-    currentRecordingElement = element;
-    element.classList.add('recording');
-    element.textContent = 'Press a key...';
-
-    // Disable all keybinds temporarily
-    try {
-        await window.electronAPI.disableKeybinds();
-    } catch (error) {
-        console.error('Failed to disable keybinds:', error);
-    }
-
-    // Add global keydown listener
-    document.addEventListener('keydown', handleKeybindRecording, true);
-}
-
-async function stopRecordingKeybind() {
-    if (currentRecordingElement) {
-        currentRecordingElement.classList.remove('recording');
-        currentRecordingElement.textContent = currentKeybinds[currentRecordingElement.dataset.keybindName];
-    }
-
-    isRecordingKeybind = false;
-    currentRecordingElement = null;
-    document.removeEventListener('keydown', handleKeybindRecording, true);
-
-    // Re-enable all keybinds
-    try {
-        await window.electronAPI.enableKeybinds();
-    } catch (error) {
-        console.error('Failed to enable keybinds:', error);
-    }
-}
-
-async function handleKeybindRecording(event) {
-    event.preventDefault();
-    event.stopPropagation();
-
-    if (!isRecordingKeybind || !currentRecordingElement) return;
-
-    const keybindName = currentRecordingElement.dataset.keybindName;
-    const modifiers = [];
-
-    if (event.ctrlKey) modifiers.push('Control');
-    if (event.altKey) modifiers.push('Alt');
-    if (event.shiftKey) modifiers.push('Shift');
-    if (event.metaKey) modifiers.push('Meta');
-
-    let key = event.key;
-
-    // Handle special keys
-    if (key === ' ') key = 'Space';
-    if (key === 'ArrowUp') key = 'Up';
-    if (key === 'ArrowDown') key = 'Down';
-    if (key === 'ArrowLeft') key = 'Left';
-    if (key === 'ArrowRight') key = 'Right';
-
-    // Skip modifier-only keys
-    if (['Control', 'Alt', 'Shift', 'Meta'].includes(key)) return;
-
-    const newShortcut = modifiers.length > 0 ? `${modifiers.join('+')}+${key}` : key;
-
-    // Check if shortcut is already in use (optimized with Map)
-    let isAlreadyUsed = false;
-    for (const [name, shortcut] of keybindMap) {
-        if (name !== keybindName && shortcut === newShortcut) {
-            isAlreadyUsed = true;
-            break;
-        }
-    }
-
-    if (isAlreadyUsed) {
-        currentRecordingElement.classList.add('error');
-        currentRecordingElement.textContent = 'Already used';
-        setTimeout(async () => {
-            currentRecordingElement.classList.remove('error');
-            await stopRecordingKeybind();
-        }, 1500);
-        return;
-    }
-
-    // Update the keybind
-    await updateKeybind(keybindName, newShortcut);
-    await stopRecordingKeybind();
-}
-
-async function updateKeybind(keybindName, newShortcut) {
-    try {
-        const success = await window.electronAPI.updateKeybind(keybindName, newShortcut);
-        if (success) {
-            currentKeybinds[keybindName] = newShortcut;
-            keybindMap.set(keybindName, newShortcut); // Sync Map
-            currentRecordingElement.textContent = newShortcut;
-            setPassthroughKeybindText();
-        } else {
-            currentRecordingElement.classList.add('error');
-            currentRecordingElement.textContent = 'Failed';
-            setTimeout(async () => {
-                currentRecordingElement.classList.remove('error');
-                await stopRecordingKeybind();
-            }, 1500);
+        const keybinds = await window.electronAPI.getKeybinds();
+        if (keybinds && keybinds.togglePassthrough) {
+            passthroughKeybind.textContent = `Press ${keybinds.togglePassthrough} to exit passthrough mode.`;
         }
     } catch (error) {
-        console.error('Failed to update keybind:', error);
-        currentRecordingElement.classList.add('error');
-        currentRecordingElement.textContent = 'Error';
-        setTimeout(async () => {
-            currentRecordingElement.classList.remove('error');
-            await stopRecordingKeybind();
-        }, 1500);
-    }
-}
-
-function setPassthroughKeybindText() {
-    // Check if the passthroughKeybind element exists and currentKeybinds is available
-    if (typeof passthroughKeybind !== 'undefined' && currentKeybinds && currentKeybinds.togglePassthrough) {
-        // Get the shortcut string for the 'togglePassthrough' action
-        const shortcut = currentKeybinds.togglePassthrough;
-
-        // Set the text content of the passthroughKeybind span
-        passthroughKeybind.textContent = `Press ${shortcut} to exit passthrough mode.`;
+        console.error('Failed to load passthrough keybind:', error);
     }
 }
 
 function initializeDOMElements() {
     columnsContainer = document.getElementById('columnsContainer');
-    settingsContainer = document.getElementById('settingsContainer');
     helpContainer = document.getElementById('helpContainer');
     passthroughTitle = document.getElementById('passthroughTitle');
     passthroughKeybind = document.getElementById('passthroughKeybind');
@@ -669,11 +418,8 @@ function initializeDOMElements() {
     helpButton = document.getElementById('helpButton');
     settingsButton = document.getElementById('settingsButton');
     closeButton = document.getElementById('closeButton');
-    historyButton = document.getElementById('historyButton'); // Initialize before using in array
-    timeoutSlider = document.getElementById('timeoutSlider');
-    timeoutValue = document.getElementById('timeoutValue');
+    historyButton = document.getElementById('historyButton');
     allButtons = [clearButton, pauseButton, helpButton, settingsButton, historyButton, closeButton];
-    keybindList = document.getElementById('keybindList');
 }
 
 /**
@@ -780,30 +526,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDOMElements();
     initialize();
 
-    // Initialize opacity slider with utility function
+    // Initialize opacity slider
     initializeOpacitySlider('opacitySlider', 'backgroundOpacity');
 
     // Initialize resize handles
     initializeResizeHandles();
 
-    settingsButton.addEventListener('click', () => {
-        if (!settingsContainer.classList.contains('hidden')) {
-            loadKeybinds();
-        }
-    });
+    // Load passthrough keybind text
+    loadPassthroughKeybind();
 
-    // Initialize timeout slider
-    console.log('Timeout slider element:', timeoutSlider);
-    console.log('Timeout value element:', timeoutValue);
-
-    // Load initial timeout from server
-    loadInitialTimeout();
-
-    timeoutSlider.addEventListener('input', (event) => {
-        console.log('Timeout slider changed to:', event.target.value);
-        updateTimeoutValue();
-        updateFightTimeout(parseInt(event.target.value));
-    });
 
     // Listen for the passthrough toggle event from the main process
     window.electronAPI.onTogglePassthrough((isIgnoring) => {
@@ -814,7 +545,6 @@ document.addEventListener('DOMContentLoaded', () => {
             passthroughTitle.classList.remove('hidden');
             passthroughKeybind.classList.remove('hidden');
             columnsContainer.classList.remove('hidden');
-            settingsContainer.classList.add('hidden');
             helpContainer.classList.add('hidden');
         } else {
             allButtons.forEach((button) => {

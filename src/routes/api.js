@@ -4,6 +4,7 @@ import logger from '../services/Logger.js';
 import { promises as fsPromises } from 'fs';
 import userDataManager from '../services/UserDataManager.js';
 import { reloadSkillConfig } from '../models/UserData.js';
+import cap from 'cap';
 
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
@@ -692,6 +693,92 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     msg: 'Failed to read fight log',
                 });
             }
+        }
+    });
+
+    // Get available network adapters
+    router.get('/network/adapters', (req, res) => {
+        try {
+            const devices = cap.deviceList();
+            const adapters = devices.map((device, index) => ({
+                index: index,
+                name: device.name,
+                description: device.description || device.name,
+                addresses: device.addresses
+            }));
+            res.json({
+                code: 0,
+                data: adapters
+            });
+        } catch (error) {
+            logger.error('Failed to get network adapters:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to get network adapters'
+            });
+        }
+    });
+
+    // Get selected network adapter
+    router.get('/network/selected', async (req, res) => {
+        try {
+            const settingsPath = path.join('./networkSettings.json');
+            try {
+                const data = await fsPromises.readFile(settingsPath, 'utf8');
+                const settings = JSON.parse(data);
+                res.json({
+                    code: 0,
+                    data: {
+                        selectedAdapter: settings.selectedAdapter || 'auto'
+                    }
+                });
+            } catch (error) {
+                if (error.code === 'ENOENT') {
+                    // File doesn't exist, return auto
+                    res.json({
+                        code: 0,
+                        data: {
+                            selectedAdapter: 'auto'
+                        }
+                    });
+                } else {
+                    throw error;
+                }
+            }
+        } catch (error) {
+            logger.error('Failed to get selected network adapter:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to get selected network adapter'
+            });
+        }
+    });
+
+    // Set selected network adapter
+    router.post('/network/selected', async (req, res) => {
+        try {
+            const { selectedAdapter } = req.body;
+            const settingsPath = path.join('./networkSettings.json');
+
+            const settings = {
+                selectedAdapter: selectedAdapter
+            };
+
+            await fsPromises.writeFile(settingsPath, JSON.stringify(settings, null, 2), 'utf8');
+
+            logger.info(`Network adapter setting updated: ${selectedAdapter}`);
+
+            res.json({
+                code: 0,
+                msg: 'Network adapter setting updated. Please restart the application for changes to take effect.',
+                data: settings
+            });
+        } catch (error) {
+            logger.error('Failed to set selected network adapter:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to set selected network adapter'
+            });
         }
     });
 

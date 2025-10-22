@@ -1,0 +1,250 @@
+/* Settings Window Specific Styles */
+
+.settings-tabs {
+    display: flex;
+    gap: 0;
+    background: rgba(30, 30, 30, 0.9);
+    border-bottom: 2px solid rgba(100, 100, 100, 0.5);
+    padding: 0;
+}
+
+.tab-button {
+    flex: 1;
+    padding: 12px 20px;
+    background: transparent;
+    color: rgba(255, 255, 255, 0.7);
+    border: none;
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+}
+
+.tab-button:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.tab-button.active {
+    background: rgba(255, 255, 255, 0.05);
+    color: #ffffff;
+    border-bottom-color: #4a9eff;
+}
+
+.settings-content {
+    padding: 20px;
+    overflow-y: auto;
+    max-height: calc(100vh - 150px);
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+.settings-section {
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid rgba(100, 100, 100, 0.3);
+}
+
+.settings-section:last-child {
+    border-bottom: none;
+}
+
+.settings-section h3 {
+    margin: 0 0 15px 0;
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.settings-option {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.settings-option label {
+    min-width: 200px;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.settings-option input[type="range"] {
+    flex: 1;
+    max-width: 300px;
+}
+
+.settings-option select {
+    flex: 1;
+    max-width: 400px;
+    padding: 8px 12px;
+    background: rgba(40, 40, 40, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+}
+
+.settings-option select:focus {
+    outline: none;
+    border-color: #4a9eff;
+}
+
+.settings-option span {
+    min-width: 40px;
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 13px;
+    text-align: center;
+}
+
+.settings-option-description {
+    margin: 5px 0 15px 0;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 12px;
+    font-style: italic;
+    line-height: 1.4;
+}
+
+.settings-option-warning {
+    margin: 10px 0 15px 0;
+    padding: 10px 15px;
+    background: rgba(255, 165, 0, 0.1);
+    border-left: 3px solid rgba(255, 165, 0, 0.7);
+    color: rgba(255, 165, 0, 0.9);
+    font-size: 12px;
+    border-radius: 4px;
+}
+
+.network-adapter-group {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    flex: 1;
+}
+
+.network-adapter-group select {
+    flex: 1;
+}
+
+.icon-button {
+    padding: 8px 12px;
+    background: rgba(60, 60, 60, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s ease;
+}
+
+.icon-button:hover {
+    background: rgba(80, 80, 80, 0.9);
+    border-color: #4a9eff;
+}
+
+.icon-button:active {
+    background: rgba(50, 50, 50, 0.9);
+}
+
+/* Keybind List Styles */
+.keybind-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.keybind-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 15px;
+    background: rgba(40, 40, 40, 0.6);
+    border: 1px solid rgba(100, 100, 100, 0.3);
+    border-radius: 4px;
+    transition: all 0.2s ease;
+}
+
+.keybind-item:hover {
+    background: rgba(50, 50, 50, 0.7);
+    border-color: rgba(100, 100, 100, 0.5);
+}
+
+.keybind-label {
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.keybind-shortcut {
+    padding: 6px 12px;
+    background: rgba(60, 60, 60, 0.9);
+    color: #4a9eff;
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    min-width: 120px;
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.keybind-shortcut:hover {
+    background: rgba(70, 70, 70, 0.9);
+    border-color: #4a9eff;
+}
+
+.keybind-shortcut.recording {
+    background: rgba(74, 158, 255, 0.2);
+    border-color: #4a9eff;
+    color: #ffffff;
+    animation: pulse 1s infinite;
+}
+
+.keybind-shortcut.error {
+    background: rgba(255, 80, 80, 0.2);
+    border-color: #ff5050;
+    color: #ff5050;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.6;
+    }
+}
+
+/* Scrollbar Styles */
+.settings-content::-webkit-scrollbar {
+    width: 8px;
+}
+
+.settings-content::-webkit-scrollbar-track {
+    background: rgba(30, 30, 30, 0.5);
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+    background: rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: rgba(120, 120, 120, 0.7);
+}
