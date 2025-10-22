@@ -747,10 +747,3 @@ function updateHistoryView() {
         document.getElementById('viewHistoryButton').classList.add('active');
     }
 }
-
-// Clear fight history (disabled - logs are permanent)
-async function clearFightHistory() {
-    alert(
-        'Fight history is now based on permanent log files and cannot be cleared from this interface. To remove logs, manually delete the log directories.'
-    );
-}
