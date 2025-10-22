@@ -19,12 +19,14 @@ class Window {
     _window = null;
     config = {};
     defaultConfig = {
-        width: 300,
-        height: 300,
+        width: 549,
+        height: 362,
         x: undefined,
         y: undefined,
+        minWidth: 549,
+        minHeight: 362,
         passthrough: false,
-        lastHeight: 300, // Default restore height for minimize feature
+        lastHeight: 362, // Default restore height for minimize feature
     };
 
     constructor() {
@@ -80,8 +82,8 @@ class Window {
             height: this.config.height,
             x: this.config.x,
             y: this.config.y,
-            minWidth: 400,
-            minHeight: 42,
+            minWidth: 549,
+            minHeight: 362,
             transparent: true,
             frame: false,
             title: 'BPSR-PSO',

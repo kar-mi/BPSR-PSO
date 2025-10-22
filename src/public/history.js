@@ -144,7 +144,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add event listeners for all buttons
     document.getElementById('viewCumulativeButton').addEventListener('click', viewCumulativeStats);
     document.getElementById('viewHistoryButton').addEventListener('click', viewFightHistory);
-    document.getElementById('clearHistoryButton').addEventListener('click', clearFightHistory);
     document.getElementById('applyDateRange').addEventListener('click', applyDateRange);
     document.getElementById('resetDateRange').addEventListener('click', resetDateRange);
 
@@ -356,7 +355,7 @@ function renderFightDetailsTable() {
     const isTanking = currentDataType === 'tanking';
 
     // Pre-calculate and cache rates for each user to avoid redundant calculations
-    users.forEach(user => {
+    users.forEach((user) => {
         const totalCount = user.total_count?.total || 0;
         if (!user._cachedRates || user._cachedRatesCount !== totalCount) {
             const critCount = user.total_count?.critical || 0;
@@ -747,11 +746,4 @@ function updateHistoryView() {
         fightListView.classList.remove('hidden');
         document.getElementById('viewHistoryButton').classList.add('active');
     }
-}
-
-// Clear fight history (disabled - logs are permanent)
-async function clearFightHistory() {
-    alert(
-        'Fight history is now based on permanent log files and cannot be cleared from this interface. To remove logs, manually delete the log directories.'
-    );
 }
