@@ -263,6 +263,28 @@ export class UserData {
         const luckyRate = stat.count.total > 0 ? stat.count.lucky / stat.count.total : 0;
         const name = skillConfig[skillId % 1000000000] ?? skillId % 1000000000;
 
+        // Calculate averages for each hit type
+        const normalAvg = stat.count.normal > 0 ? stat.stats.normal / stat.count.normal : 0;
+        const critAvg = stat.count.critical > 0 ? stat.stats.critical / stat.count.critical : 0;
+        const luckyAvg = stat.count.lucky > 0 ? stat.stats.lucky / stat.count.lucky : 0;
+        const critLuckyAvg = (stat.count.critical + stat.count.lucky) > 0 ? stat.stats.crit_lucky / (stat.count.critical + stat.count.lucky) : 0;
+        const overallAvg = stat.count.total > 0 ? stat.stats.total / stat.count.total : 0;
+
+        // Calculate DPS/HPS (damage/healing per second)
+        const dps = stat.getTotalPerSecond ? stat.getTotalPerSecond() : 0;
+
+        // Calculate hits per second
+        const timeRangeSeconds = stat.timeRange[0] && stat.timeRange[1]
+            ? (stat.timeRange[1] - stat.timeRange[0]) / 1000
+            : 0;
+        const hitsPerSecond = timeRangeSeconds > 0 ? stat.count.total / timeRangeSeconds : 0;
+
+        // Get min/max values, handle Infinity
+        const normalMin = stat.minMax.normal.min === Infinity ? 0 : stat.minMax.normal.min;
+        const normalMax = stat.minMax.normal.max;
+        const critMin = stat.minMax.critical.min === Infinity ? 0 : stat.minMax.critical.min;
+        const critMax = stat.minMax.critical.max;
+
         return {
             displayName: name,
             type: stat.type,
@@ -273,6 +295,32 @@ export class UserData {
             luckyCount: stat.count.lucky,
             critRate: critRate,
             luckyRate: luckyRate,
+
+            // New detailed statistics
+            dps: dps,
+            hitsPerSecond: hitsPerSecond,
+            averages: {
+                overall: overallAvg,
+                normal: normalAvg,
+                crit: critAvg,
+                lucky: luckyAvg,
+                critLucky: critLuckyAvg,
+            },
+            normal: {
+                min: normalMin,
+                max: normalMax,
+                avg: normalAvg,
+                count: stat.count.normal,
+                total: stat.stats.normal,
+            },
+            crit: {
+                min: critMin,
+                max: critMax,
+                avg: critAvg,
+                count: stat.count.critical,
+                total: stat.stats.critical,
+            },
+
             damageBreakdown: { ...stat.stats },
             countBreakdown: { ...stat.count },
         };

@@ -214,45 +214,105 @@ function renderSkillBreakdown() {
     // Use DocumentFragment for batch DOM insertion
     const fragment = document.createDocumentFragment();
 
-    skillsArray.forEach((skill, index) => {
-        const item = document.createElement('li');
-        item.className = 'data-item skill-item';
+    // Create table structure
+    const table = document.createElement('table');
+    table.className = 'skills-table';
 
+    // Dynamic header labels based on data type
+    const percentLabel = currentDataType === 'damage' ? 'Dmg %' : 'Heal %';
+    const dpsLabel = currentDataType === 'damage' ? 'DPS' : 'HPS';
+
+    // Create table header
+    const thead = document.createElement('thead');
+    thead.innerHTML = `
+        <tr>
+            <th>#</th>
+            <th>Element</th>
+            <th>Skill Name</th>
+            <th>Total</th>
+            <th>${percentLabel}</th>
+            <th>${dpsLabel}</th>
+            <th>Avg</th>
+            <th>Hits</th>
+            <th>HitPS</th>
+            <th>Normal Avg</th>
+            <th>Normal Low</th>
+            <th>Normal High</th>
+            <th>Crit Avg</th>
+            <th>Crit Low</th>
+            <th>Crit High</th>
+            <th>Crit Hits</th>
+            <th>Crit %</th>
+            <th>Lucky %</th>
+        </tr>
+    `;
+    table.appendChild(thead);
+
+    // Create table body
+    const tbody = document.createElement('tbody');
+
+    skillsArray.forEach((skill, index) => {
         const damagePercent = skill.totalDamage * damageMultiplier;
-        const avgHit = skill.totalCount > 0 ? Math.round(skill.totalDamage / skill.totalCount) : 0;
-        const critRate = ((skill.critRate || 0) * 100).toFixed(1);
-        const luckyRate = ((skill.luckyRate || 0) * 100).toFixed(1);
 
         // Format numbers
-        const formattedDamage = formatNumber(skill.totalDamage || 0);
-        const formattedAvg = formatNumber(avgHit);
+        const formattedTotal = formatNumber(skill.totalDamage || 0);
+        const formattedDps = formatNumber(Math.round(skill.dps || 0));
+        const formattedAvg = formatNumber(Math.round(skill.averages?.overall || 0));
+        const formattedHitPs = (skill.hitsPerSecond || 0).toFixed(2);
+
+        const formattedNormalAvg = formatNumber(Math.round(skill.normal?.avg || 0));
+        const formattedNormalLow = formatNumber(Math.round(skill.normal?.min || 0));
+        const formattedNormalHigh = formatNumber(Math.round(skill.normal?.max || 0));
+
+        const formattedCritAvg = formatNumber(Math.round(skill.crit?.avg || 0));
+        const formattedCritLow = formatNumber(Math.round(skill.crit?.min || 0));
+        const formattedCritHigh = formatNumber(Math.round(skill.crit?.max || 0));
+
+        const critRate = ((skill.critRate || 0) * 100).toFixed(1);
+        const luckyRate = ((skill.luckyRate || 0) * 100).toFixed(1);
         const damagePercentStr = damagePercent.toFixed(1);
 
-        // Determine bar color based on damage type
-        const barColor = skill.type === '治疗' ? 'hsl(180, 90%, 20%)' : 'hsl(0, 90%, 30%)';
-
-        item.innerHTML = `
-            <div class="main-bar">
-                <div class="dps-bar-fill" style="width: ${damagePercent}%; background-color: ${barColor};"></div>
-                <div class="content">
-                    <span class="rank">${index + 1}.</span>
-                    <span class="skill-element">${skill.elementype || ''}</span>
-                    <span class="name">${skill.displayName || skill.id}</span>
-                    <span class="stats">${formattedDamage} (${damagePercentStr}%)</span>
-                </div>
-            </div>
-            <div class="sub-bar">
-                <div class="skill-details">
-                    <span>Uses: ${skill.totalCount || 0}</span>
-                    <span>Avg: ${formattedAvg}</span>
-                    <span>Crit: ${critRate}%</span>
-                    <span>Lucky: ${luckyRate}%</span>
-                </div>
-            </div>
+        const tr = document.createElement('tr');
+        tr.className = 'skill-row';
+        tr.innerHTML = `
+            <td>${index + 1}</td>
+            <td class="skill-element">${skill.elementype || ''}</td>
+            <td class="skill-name">${skill.displayName || skill.id}</td>
+            <td class="numeric">${formattedTotal}</td>
+            <td class="numeric">${damagePercentStr}%</td>
+            <td class="numeric">${formattedDps}</td>
+            <td class="numeric">${formattedAvg}</td>
+            <td class="numeric">${skill.totalCount || 0}</td>
+            <td class="numeric">${formattedHitPs}</td>
+            <td class="numeric">${formattedNormalAvg}</td>
+            <td class="numeric">${formattedNormalLow}</td>
+            <td class="numeric">${formattedNormalHigh}</td>
+            <td class="numeric">${formattedCritAvg}</td>
+            <td class="numeric">${formattedCritLow}</td>
+            <td class="numeric">${formattedCritHigh}</td>
+            <td class="numeric">${skill.critCount || 0}</td>
+            <td class="numeric">${critRate}%</td>
+            <td class="numeric">${luckyRate}%</td>
         `;
 
-        fragment.appendChild(item);
+        // Add progress bar indicator
+        const progressBar = document.createElement('div');
+        progressBar.className = 'skill-progress-bar';
+        progressBar.style.width = `${damagePercent}%`;
+
+        // Color based on damage/healing type
+        if (skill.type === '治疗') {
+            progressBar.style.backgroundColor = 'rgba(78, 205, 196, 0.5)'; // Teal for healing
+        } else {
+            progressBar.style.backgroundColor = 'rgba(255, 107, 107, 0.5)'; // Red for damage
+        }
+
+        tr.appendChild(progressBar);
+        tbody.appendChild(tr);
     });
+
+    table.appendChild(tbody);
+    fragment.appendChild(table);
 
     // Single DOM update
     columnsContainer.innerHTML = '';

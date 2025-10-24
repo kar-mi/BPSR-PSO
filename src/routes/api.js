@@ -225,9 +225,15 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         try {
             const data = await fsPromises.readFile(historyFilePath, 'utf8');
             const userData = JSON.parse(data);
+
+            // Filter out users with 0 total damage
+            const filteredUserData = userData.filter((user) => {
+                return user.total_damage > 0;
+            });
+
             res.json({
                 code: 0,
-                user: userData,
+                user: filteredUserData,
             });
         } catch (error) {
             if (error.code === 'ENOENT') {
@@ -276,10 +282,12 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
 
                 // Track per-skill stats for the specific enemy
                 const skillStatsPerEnemy = {};
+                const skillTimestamps = {}; // Track first and last timestamp per skill
 
                 for (const line of lines) {
                     const match = line.match(LOG_PARSE_REGEX);
                     if (match) {
+                        const timestamp = parseInt(match[1]);
                         const type = match[2]; // DMG or HEAL
                         const playerUid = match[4];
                         const targetName = match[5];
@@ -302,14 +310,43 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                                     totalCount: 0,
                                     critCount: 0,
                                     luckyCount: 0,
+                                    normalCount: 0,
                                     type: type === 'DMG' ? '伤害' : '治疗',
+                                    normal: { total: 0, min: Infinity, max: 0 },
+                                    crit: { total: 0, min: Infinity, max: 0 },
+                                    lucky: { total: 0, min: Infinity, max: 0 },
+                                    critLucky: { total: 0, min: Infinity, max: 0 },
                                 };
+                                skillTimestamps[skillId] = { first: timestamp, last: timestamp };
                             }
 
                             skillStatsPerEnemy[skillId].totalDamage += value;
                             skillStatsPerEnemy[skillId].totalCount += 1;
-                            if (isCrit) skillStatsPerEnemy[skillId].critCount += 1;
-                            if (isLucky) skillStatsPerEnemy[skillId].luckyCount += 1;
+                            skillTimestamps[skillId].last = timestamp;
+
+                            // Track hits by type with min/max
+                            if (isCrit && isLucky) {
+                                skillStatsPerEnemy[skillId].critCount += 1;
+                                skillStatsPerEnemy[skillId].luckyCount += 1;
+                                skillStatsPerEnemy[skillId].critLucky.total += value;
+                                skillStatsPerEnemy[skillId].critLucky.min = Math.min(skillStatsPerEnemy[skillId].critLucky.min, value);
+                                skillStatsPerEnemy[skillId].critLucky.max = Math.max(skillStatsPerEnemy[skillId].critLucky.max, value);
+                            } else if (isCrit) {
+                                skillStatsPerEnemy[skillId].critCount += 1;
+                                skillStatsPerEnemy[skillId].crit.total += value;
+                                skillStatsPerEnemy[skillId].crit.min = Math.min(skillStatsPerEnemy[skillId].crit.min, value);
+                                skillStatsPerEnemy[skillId].crit.max = Math.max(skillStatsPerEnemy[skillId].crit.max, value);
+                            } else if (isLucky) {
+                                skillStatsPerEnemy[skillId].luckyCount += 1;
+                                skillStatsPerEnemy[skillId].lucky.total += value;
+                                skillStatsPerEnemy[skillId].lucky.min = Math.min(skillStatsPerEnemy[skillId].lucky.min, value);
+                                skillStatsPerEnemy[skillId].lucky.max = Math.max(skillStatsPerEnemy[skillId].lucky.max, value);
+                            } else {
+                                skillStatsPerEnemy[skillId].normalCount += 1;
+                                skillStatsPerEnemy[skillId].normal.total += value;
+                                skillStatsPerEnemy[skillId].normal.min = Math.min(skillStatsPerEnemy[skillId].normal.min, value);
+                                skillStatsPerEnemy[skillId].normal.max = Math.max(skillStatsPerEnemy[skillId].normal.max, value);
+                            }
                         }
                     }
                 }
@@ -320,6 +357,25 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     // Get original skill info for display name and element
                     const originalSkill = skillData.skills?.[skillId];
 
+                    // Calculate rates
+                    const critRate = stats.totalCount > 0 ? stats.critCount / stats.totalCount : 0;
+                    const luckyRate = stats.totalCount > 0 ? stats.luckyCount / stats.totalCount : 0;
+
+                    // Calculate averages
+                    const normalAvg = stats.normalCount > 0 ? stats.normal.total / stats.normalCount : 0;
+                    const critAvg = stats.critCount > 0 ? stats.crit.total / stats.critCount : 0;
+                    const overallAvg = stats.totalCount > 0 ? stats.totalDamage / stats.totalCount : 0;
+
+                    // Calculate DPS/HPS and hits per second
+                    const timestamps = skillTimestamps[skillId];
+                    const timeRangeSeconds = timestamps ? (timestamps.last - timestamps.first) / 1000 : 0;
+                    const dps = timeRangeSeconds > 0 ? stats.totalDamage / timeRangeSeconds : 0;
+                    const hitsPerSecond = timeRangeSeconds > 0 ? stats.totalCount / timeRangeSeconds : 0;
+
+                    // Handle Infinity for min values
+                    const normalMin = stats.normal.min === Infinity ? 0 : stats.normal.min;
+                    const critMin = stats.crit.min === Infinity ? 0 : stats.crit.min;
+
                     filteredSkills[skillId] = {
                         displayName: originalSkill?.displayName || skillId,
                         type: stats.type,
@@ -328,8 +384,32 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                         totalCount: stats.totalCount,
                         critCount: stats.critCount,
                         luckyCount: stats.luckyCount,
-                        critRate: stats.totalCount > 0 ? stats.critCount / stats.totalCount : 0,
-                        luckyRate: stats.totalCount > 0 ? stats.luckyCount / stats.totalCount : 0,
+                        critRate: critRate,
+                        luckyRate: luckyRate,
+
+                        // New detailed statistics
+                        dps: dps,
+                        hitsPerSecond: hitsPerSecond,
+                        averages: {
+                            overall: overallAvg,
+                            normal: normalAvg,
+                            crit: critAvg,
+                        },
+                        normal: {
+                            min: normalMin,
+                            max: stats.normal.max,
+                            avg: normalAvg,
+                            count: stats.normalCount,
+                            total: stats.normal.total,
+                        },
+                        crit: {
+                            min: critMin,
+                            max: stats.crit.max,
+                            avg: critAvg,
+                            count: stats.critCount,
+                            total: stats.crit.total,
+                        },
+
                         damageBreakdown: { total: stats.totalDamage },
                         countBreakdown: { total: stats.totalCount, critical: stats.critCount, lucky: stats.luckyCount },
                     };

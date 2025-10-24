@@ -126,10 +126,10 @@ ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId 
     const mainWindow = BrowserWindow.getAllWindows()[0];
 
     skillWindows[uid] = new BrowserWindow({
-        width: 600,
-        height: 700,
-        minWidth: 400,
-        minHeight: 300,
+        width: 1400,
+        height: 800,
+        minWidth: 800,
+        minHeight: 400,
         transparent: true,
         frame: false,
         title: `Extra Details - ${name}`,
