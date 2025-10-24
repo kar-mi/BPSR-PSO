@@ -1,4 +1,4 @@
-const packager = require('@electron/packager');
+const { packager } = require('@electron/packager');
 const path = require('path');
 const fs = require('fs');
 const { execSync } = require('child_process');
