@@ -63,9 +63,10 @@ See [DEVELOPER.md](DEVELOPER.md) for instructions on building from source.
 ## Usage
 
 1. **Launch the Application**: Run `BPSR-PSO.exe`
-2. **Configure Network Adapter**:
+2. **Configure Network Adapter(Optional)**:
     - Click the settings button (⚙️)
     - Select your active network adapter from the dropdown
+        - By default, this will automatically choose the network adapter
     - The application will automatically detect network traffic
 3. **Start Combat**: The meter will automatically start tracking when you enter combat in Blue Protocol: Star Resonance
 4. **View Details**:
