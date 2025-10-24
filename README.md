@@ -3,7 +3,18 @@
 **Forked from:** https://github.com/dmlgzs/StarResonanceDamageCounter / https://github.com/Chase-Simmons/BPSR-PSO
 
 Blue Protocol: Star Resonance - Per Second Overlay
-Provides a useful GUI to track DPS / HPS for nearby players
+
+A real-time damage and healing meter for Blue Protocol: Star Resonance that provides detailed performance tracking and analysis for yourself and nearby players.
+
+## Features
+
+- **Real-time DPS/HPS Tracking**: Monitor damage and healing output per second during combat
+- **Detailed Skill Breakdown**: Analyze individual skill performance with comprehensive statistics
+- **Fight History**: Review and compare past encounters with filterable date ranges
+- **Enemy-Specific Analytics**: Filter damage/healing data by specific enemies
+- **Comprehensive Statistics**: Track averages, critical hits, lucky hits, min/max values, and more
+- **Transparent Overlay**: Customizable opacity and window positioning
+- **No Game Modification**: Analyzes network packets without touching game files
 
 ## Screenshots
 
@@ -18,91 +29,88 @@ Real-time damage tracking overlay showing player performance during combat.
 ![Skill Breakdown](screenshots/skill_breakdown.png)
 
 Detailed skill-by-skill analysis with DPS graphs, damage distribution, and performance metrics including critical hit rates and lucky hit percentages.
+Update the skills under `src\tables\skill_names.json`
 
 ### Fight History
 
 ![Fight History](screenshots/history.png)
 
-Track and review past encounters with damage,healing, and tanking totals across different time periods.
+Track and review past encounters with damage, healing, and tanking totals across different time periods.
 
-## About the Project
-
-This is a standalone application and does not interface with BPSR or modify any of its files. It analyzes packet while in transit.
-
-## Getting Started
-
-These instructions will get you a copy of the project up and running on your local machine for development and testing purposes.
+## Installation
 
 ### Prerequisites
 
-You'll need to have the following software installed:
+Before installing BPSR-PSO, you'll need:
 
-- **Node.js**: <https://nodejs.org/>
-- **npm**: Comes bundled with Node.js.
-- **Npcap**: The installer is located at https://npcap.com/dist/npcap-1.84.exe
+1. **Npcap** - Network packet capture library
+    - Download: https://npcap.com/dist/npcap-1.84.exe
+    - **Important**: During installation, select **"Install Npcap in WinPcap API-compatible Mode"**
+    - ![option](screenshots/npcap_option.png)
 
-### Installation
+### Download & Run
 
-1.  **Clone the repository:**
+#### Option 1: Download Pre-built Release (Recommended)
 
-    ```bash
-    git clone https://github.com/kar-mi/BPSR-PSO.git
-    ```
+1. Download the latest release from the [Releases page](https://github.com/kar-mi/BPSR-PSO/releases)
+2. Extract the ZIP file to a folder of your choice
+3. Run `BPSR-PSO.exe`
 
-2.  **Navigate into the project directory:**
+#### Option 2: Build from Source
 
-    ```bash
-    cd BPSR-PSO
-    ```
+See [DEVELOPER.md](DEVELOPER.md) for instructions on building from source.
 
-3.  **Install Npcap:**
-    - Navigate to the npcap installer at https://npcap.com/dist/npcap-1.84.exe
-    - Run the Npcap installer. Be sure to select the option to **"Install Npcap in WinPcap API-compatible Mode"** during installation.
-    - After installation, return to the project root: `cd ..`
+## Usage
 
-4.  **Install Node.js dependencies:**
-    ```bash
-    npm install
-    npm run rebuild
-    ```
+1. **Launch the Application**: Run `BPSR-PSO.exe`
+2. **Configure Network Adapter**:
+    - Click the settings button (⚙️)
+    - Select your active network adapter from the dropdown
+    - The application will automatically detect network traffic
+3. **Start Combat**: The meter will automatically start tracking when you enter combat in Blue Protocol: Star Resonance
+4. **View Details**:
+    - Double-click any player to view detailed skill breakdown
+    - Access fight history through the history button
+    - Filter by specific enemies using the dropdown in the skill breakdown window
 
-## Running the Application
+### Controls
 
-To start the application, run the following command from the project root:
+- **Opacity Slider**: Adjust window transparency
+- **Clear Button**: Reset current combat data
+- **History Button**: View past fight records
+- **Settings Button**: Configure network adapter and fight timeout
 
-```bash
-npm start dev
-```
+## About the Project
 
-## Building for Production
+This is a standalone application and does not interface with Blue Protocol: Star Resonance or modify any of its files. It analyzes network packets in transit to provide real-time combat analytics. A lot of additions through Claude AI :3
 
-To create a distributable build of the application:
+**This tool is for personal use and analysis only. Use at your own risk.**
 
-```bash
-npm run build
-```
+## Privacy & Security
 
-This will:
+- All data is stored locally on your computer
+- No external API calls or data transmission (except CDN resources for fonts/libraries)
+- Network adapter configuration is required for packet analysis
+- The application only reads game traffic; it does not modify or inject packets
 
-1. Rebuild native modules for Electron compatibility
-2. Package the application for Windows x64
-3. Create a ZIP file in the `dist/` directory
+## Support & Issues
 
-The output will be: `dist/BPSR-PSO-win32-x64.zip`
+If you encounter any issues or have feature requests:
 
-### Build Requirements
+1. Check existing [Issues](https://github.com/kar-mi/BPSR-PSO/issues)
+2. Create a new issue with detailed information about the problem
+3. Include screenshots if applicable
 
-- **7z (optional)**: For better compression. The build script will automatically use 7z if installed, otherwise falls back to PowerShell's Compress-Archive.
-  Added prs
+## Contributing
 
-```
-https://github.com/Chase-Simmons/BPSR-PSO/pull/23/files
-https://github.com/Chase-Simmons/BPSR-PSO/pull/20/files
-https://github.com/Chase-Simmons/BPSR-PSO/pull/18/files
-```
+Contributions are welcome! Please see [DEVELOPER.md](DEVELOPER.md) for development guidelines.
 
-```
-Translations
-```
+## License
 
-https://github.com/Zaarrg/BlueProtocolStarResonanceDataAnalysis/tree/master/Data/ProcessedGameData/StarResonanceDps_Data
+See [LICENSE.txt](LICENSE.txt) for license information.
+
+## Acknowledgments
+
+- Original project by [dmlgzs](https://github.com/dmlgzs/StarResonanceDamageCounter)
+- Continued by [Chase-Simmons](https://github.com/Chase-Simmons/BPSR-PSO)
+- Translation data from [Zaarrg's Blue Protocol Data Analysis](https://github.com/Zaarrg/BlueProtocolStarResonanceDataAnalysis/tree/master/Data/ProcessedGameData/StarResonanceDps_Data)
