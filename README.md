@@ -81,6 +81,12 @@ See [DEVELOPER.md](DEVELOPER.md) for instructions on building from source.
 - **History Button**: View past fight records
 - **Settings Button**: Configure network adapter and fight timeout
 
+### Common Issues
+
+#### Vpn
+
+- ExitLag recently updated their settings which changed how they redirect packets. Change your ExitLag settings to Packet redirection method > Legacy - NDIS.
+
 ## About the Project
 
 This is a standalone application and does not interface with Blue Protocol: Star Resonance or modify any of its files. It analyzes network packets in transit to provide real-time combat analytics. A lot of additions through Claude AI :3
