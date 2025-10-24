@@ -17,6 +17,13 @@ export class StatisticData {
             lucky: 0,
             total: 0,
         };
+        // Track min/max values for each hit type
+        this.minMax = {
+            normal: { min: Infinity, max: 0 },
+            critical: { min: Infinity, max: 0 },
+            lucky: { min: Infinity, max: 0 },
+            crit_lucky: { min: Infinity, max: 0 },
+        };
         this.realtimeWindow = [];
         this.timeRange = [];
         this.realtimeStats = {
@@ -34,16 +41,25 @@ export class StatisticData {
     addRecord(value, isCrit, isLucky, hpLessenValue = 0) {
         const now = Date.now();
 
+        // Track damage/healing totals and min/max
         if (isCrit) {
             if (isLucky) {
                 this.stats.crit_lucky += value;
+                this.minMax.crit_lucky.min = Math.min(this.minMax.crit_lucky.min, value);
+                this.minMax.crit_lucky.max = Math.max(this.minMax.crit_lucky.max, value);
             } else {
                 this.stats.critical += value;
+                this.minMax.critical.min = Math.min(this.minMax.critical.min, value);
+                this.minMax.critical.max = Math.max(this.minMax.critical.max, value);
             }
         } else if (isLucky) {
             this.stats.lucky += value;
+            this.minMax.lucky.min = Math.min(this.minMax.lucky.min, value);
+            this.minMax.lucky.max = Math.max(this.minMax.lucky.max, value);
         } else {
             this.stats.normal += value;
+            this.minMax.normal.min = Math.min(this.minMax.normal.min, value);
+            this.minMax.normal.max = Math.max(this.minMax.normal.max, value);
         }
         this.stats.total += value;
         this.stats.hpLessen += hpLessenValue;
@@ -111,6 +127,12 @@ export class StatisticData {
             critical: 0,
             lucky: 0,
             total: 0,
+        };
+        this.minMax = {
+            normal: { min: Infinity, max: 0 },
+            critical: { min: Infinity, max: 0 },
+            lucky: { min: Infinity, max: 0 },
+            crit_lucky: { min: Infinity, max: 0 },
         };
         this.realtimeWindow = [];
         this.timeRange = [];
