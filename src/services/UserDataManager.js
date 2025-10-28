@@ -34,7 +34,8 @@ class UserDataManager {
         this.isShuttingDown = false;
 
         // Configurable fight timeout (default 15 seconds)
-        this.fightTimeout = 15 * 1000; // milliseconds
+        // Will be loaded from settings.json via getGlobalSettings()
+        this.fightTimeout = 15 * 1000; // milliseconds (default)
 
         // inactive timeout
         this.inactiveTimeout = 120 * 1000; // milliseconds
@@ -89,6 +90,18 @@ class UserDataManager {
 
     async init() {
         await this.loadUserCache();
+        this.loadFightTimeoutFromSettings();
+    }
+
+    /**
+     * Load fight timeout from global settings
+     */
+    loadFightTimeoutFromSettings() {
+        const settings = this.getGlobalSettings();
+        if (settings.fightTimeout !== undefined && typeof settings.fightTimeout === 'number') {
+            this.fightTimeout = settings.fightTimeout;
+            logger.info(`Fight timeout loaded from settings: ${this.fightTimeout}ms`);
+        }
     }
 
     async loadUserCache() {

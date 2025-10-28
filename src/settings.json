@@ -1,0 +1,8 @@
+{
+  "autoClearOnServerChange": true,
+  "autoClearOnTimeout": true,
+  "fightTimeout": 46000,
+  "historyStartDate": "2025-10-21T01:38:04.445Z",
+  "historyEndDate": "2025-10-29T01:38:04.445Z",
+  "networkAdapter": "auto"
+}

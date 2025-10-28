@@ -27,26 +27,40 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Middleware to parse JSON requests
     router.use(express.json());
 
-    // GET all user data
-    router.get('/data', (req, res) => {
+    /**
+     * Helper function to safely read settings from file
+     * @returns {Promise<Object>} Current settings from file
+     */
+    async function readSettingsFromFile() {
         try {
-            const userData = userDataManager.getAllUsersData();
-            const data = {
-                code: 0,
-                user: userData,
-            };
-            res.json(data);
+            const data = await fsPromises.readFile(SETTINGS_PATH, 'utf8');
+            return JSON.parse(data);
         } catch (error) {
-            logger.error('Error getting user data:', error);
-            res.status(500).json({
-                code: 1,
-                msg: 'Failed to get user data',
-            });
+            if (error.code === 'ENOENT') {
+                // File doesn't exist, return default settings
+                return {
+                    autoClearOnServerChange: true,
+                    autoClearOnTimeout: true,
+                };
+            }
+            throw error;
         }
-    });
+    }
+
+    /**
+     * Helper function to safely write settings to file
+     * @param {Object} newSettings - Settings to merge and save
+     * @returns {Promise<Object>} Updated settings
+     */
+    async function updateSettingsFile(newSettings) {
+        const currentSettings = await readSettingsFromFile();
+        const updatedSettings = { ...currentSettings, ...newSettings };
+        await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(updatedSettings, null, 2), 'utf8');
+        return updatedSettings;
+    }
 
     // POST update fight timeout
-    router.post('/fight/timeout', (req, res) => {
+    router.post('/fight/timeout', async (req, res) => {
         try {
             const { timeout } = req.body;
 
@@ -58,6 +72,13 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             }
 
             userDataManager.setFightTimeout(timeout);
+
+            // Save to settings.json using helper function
+            try {
+                await updateSettingsFile({ fightTimeout: timeout });
+            } catch (error) {
+                logger.error('Failed to save fight timeout to settings:', error);
+            }
 
             res.json({
                 code: 0,
@@ -79,16 +100,6 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             code: 0,
             timeout: userDataManager.getFightTimeout(),
         });
-    });
-
-    // GET all enemy data
-    router.get('/enemies', (req, res) => {
-        const enemiesData = userDataManager.getAllEnemiesData();
-        const data = {
-            code: 0,
-            enemy: enemiesData,
-        };
-        res.json(data);
     });
 
     // Clear all statistics
@@ -168,88 +179,6 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             code: 0,
             data: skillData,
         });
-    });
-
-    // Get history summary for a specific timestamp
-    router.get('/history/:timestamp/summary', async (req, res) => {
-        const { timestamp } = req.params;
-
-        // Security: Validate timestamp is numeric only to prevent path traversal
-        if (!TIMESTAMP_REGEX.test(timestamp)) {
-            return res.status(400).json({
-                code: 1,
-                msg: 'Invalid timestamp format',
-            });
-        }
-
-        const historyFilePath = path.join('./logs', timestamp, 'summary.json');
-
-        try {
-            const data = await fsPromises.readFile(historyFilePath, 'utf8');
-            const summaryData = JSON.parse(data);
-            res.json({
-                code: 0,
-                data: summaryData,
-            });
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                logger.warn('History summary file not found:', error);
-                res.status(404).json({
-                    code: 1,
-                    msg: 'History summary file not found',
-                });
-            } else {
-                logger.error('Failed to read history summary file:', error);
-                res.status(500).json({
-                    code: 1,
-                    msg: 'Failed to read history summary file',
-                });
-            }
-        }
-    });
-
-    // Get history data for a specific timestamp
-    router.get('/history/:timestamp/data', async (req, res) => {
-        const { timestamp } = req.params;
-
-        // Security: Validate timestamp is numeric only to prevent path traversal
-        if (!TIMESTAMP_REGEX.test(timestamp)) {
-            return res.status(400).json({
-                code: 1,
-                msg: 'Invalid timestamp format',
-            });
-        }
-
-        const historyFilePath = path.join('./logs', timestamp, 'allUserData.json');
-
-        try {
-            const data = await fsPromises.readFile(historyFilePath, 'utf8');
-            const userData = JSON.parse(data);
-
-            // Filter out users with 0 total damage
-            const filteredUserData = userData.filter((user) => {
-                return user.total_damage > 0;
-            });
-
-            res.json({
-                code: 0,
-                user: filteredUserData,
-            });
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                logger.warn('History data file not found:', error);
-                res.status(404).json({
-                    code: 1,
-                    msg: 'History data file not found',
-                });
-            } else {
-                logger.error('Failed to read history data file:', error);
-                res.status(500).json({
-                    code: 1,
-                    msg: 'Failed to read history data file',
-                });
-            }
-        }
     });
 
     // Get history skill data for a specific timestamp and user
@@ -458,47 +387,26 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         res.download(historyFilePath, `fight_${timestamp}.log`);
     });
 
-    // Get a list of available history timestamps
-    router.get('/history/list', async (req, res) => {
-        try {
-            const data = (await fsPromises.readdir('./logs', { withFileTypes: true }))
-                .filter((e) => e.isDirectory() && /^\d+$/.test(e.name))
-                .map((e) => e.name);
-            res.json({
-                code: 0,
-                data: data,
-            });
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                logger.warn('History path not found:', error);
-                res.status(404).json({
-                    code: 1,
-                    msg: 'History path not found',
-                });
-            } else {
-                logger.error('Failed to load history path:', error);
-                res.status(500).json({
-                    code: 1,
-                    msg: 'Failed to load history path',
-                });
-            }
-        }
-    });
-
     // Get current settings
-    router.get('/settings', (req, res) => {
-        const settings = userDataManager.getGlobalSettings();
-        res.json({ code: 0, data: settings });
+    router.get('/settings', async (req, res) => {
+        try {
+            const settings = await readSettingsFromFile();
+            res.json({ code: 0, data: settings });
+        } catch (error) {
+            logger.error('Failed to read settings:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to read settings',
+            });
+        }
     });
 
     // Update settings
     router.post('/settings', async (req, res) => {
         const newSettings = req.body;
-        const currentSettings = userDataManager.getGlobalSettings();
-        const updatedSettings = { ...currentSettings, ...newSettings };
 
         try {
-            await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(updatedSettings, null, 2), 'utf8');
+            const updatedSettings = await updateSettingsFile(newSettings);
             res.json({ code: 0, data: updatedSettings });
         } catch (error) {
             logger.error('Failed to save settings:', error);
