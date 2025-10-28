@@ -113,34 +113,127 @@ export function formatProfession(profession, includeSubclass = true) {
 // LOCAL STORAGE UTILITIES
 // ============================================================================
 
+// ============================================================================
+// SETTINGS API SERVICE
+// ============================================================================
+
 /**
- * Initialize an opacity slider with localStorage persistence
+ * Settings service for reading and writing settings to/from the server
+ */
+class SettingsService {
+    constructor() {
+        this.cache = null;
+        this.cacheTime = 0;
+        this.cacheDuration = 5000; // 5 seconds
+    }
+
+    /**
+     * Get all settings from the server (with caching)
+     * @returns {Promise<Object>} Settings object
+     */
+    async getSettings() {
+        const now = Date.now();
+        if (this.cache && (now - this.cacheTime) < this.cacheDuration) {
+            return this.cache;
+        }
+
+        try {
+            const response = await fetch(`http://${SERVER_URL}/api/settings`);
+            const data = await response.json();
+            if (data.code === 0) {
+                this.cache = data.data || {};
+                this.cacheTime = now;
+                return this.cache;
+            }
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+        }
+        return this.cache || {};
+    }
+
+    /**
+     * Get a specific setting value
+     * @param {string} key - Setting key
+     * @param {any} defaultValue - Default value if not found
+     * @returns {Promise<any>} Setting value
+     */
+    async getSetting(key, defaultValue = null) {
+        const settings = await this.getSettings();
+        return settings[key] !== undefined ? settings[key] : defaultValue;
+    }
+
+    /**
+     * Update settings on the server
+     * @param {Object} newSettings - Settings to update
+     * @returns {Promise<Object>} Updated settings object
+     */
+    async updateSettings(newSettings) {
+        try {
+            const response = await fetch(`http://${SERVER_URL}/api/settings`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(newSettings),
+            });
+            const data = await response.json();
+            if (data.code === 0) {
+                this.cache = data.data;
+                this.cacheTime = Date.now();
+                return this.cache;
+            }
+        } catch (error) {
+            console.error('Failed to update settings:', error);
+        }
+        return null;
+    }
+
+    /**
+     * Update a single setting
+     * @param {string} key - Setting key
+     * @param {any} value - Setting value
+     * @returns {Promise<Object>} Updated settings object
+     */
+    async updateSetting(key, value) {
+        return this.updateSettings({ [key]: value });
+    }
+
+    /**
+     * Clear the cache (useful after external updates)
+     */
+    clearCache() {
+        this.cache = null;
+        this.cacheTime = 0;
+    }
+}
+
+// Export singleton instance
+export const settingsService = new SettingsService();
+
+/**
+ * Initialize an opacity slider with settings API persistence
  * @param {string} sliderId - The ID of the slider element
- * @param {string} storageKey - The localStorage key to use for persistence
+ * @param {string} settingKey - The setting key to use for persistence
  * @param {string} cssVarName - The CSS variable name to update (default: '--main-bg-opacity')
  * @param {number} defaultValue - Default opacity value if none is saved
  */
-export function initializeOpacitySlider(sliderId, storageKey, cssVarName = '--main-bg-opacity', defaultValue = 0.95) {
+export async function initializeOpacitySlider(sliderId, settingKey, cssVarName = '--main-bg-opacity', defaultValue = 0.95) {
     const slider = document.getElementById(sliderId);
     if (!slider) {
         console.warn(`Opacity slider with ID "${sliderId}" not found`);
         return;
     }
 
-    const savedOpacity = localStorage.getItem(storageKey);
+    // Load saved opacity from settings
+    const savedOpacity = await settingsService.getSetting(settingKey, defaultValue);
+    slider.value = savedOpacity;
+    document.documentElement.style.setProperty(cssVarName, savedOpacity);
 
-    if (savedOpacity !== null) {
-        slider.value = savedOpacity;
-        document.documentElement.style.setProperty(cssVarName, savedOpacity);
-    } else {
-        slider.value = defaultValue;
-        document.documentElement.style.setProperty(cssVarName, defaultValue);
-    }
-
-    slider.addEventListener('input', (event) => {
+    // Save on change
+    slider.addEventListener('input', async (event) => {
         const newOpacity = event.target.value;
         document.documentElement.style.setProperty(cssVarName, newOpacity);
-        localStorage.setItem(storageKey, newOpacity);
+        await settingsService.updateSetting(settingKey, newOpacity);
     });
 }
 

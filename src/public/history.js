@@ -8,6 +8,7 @@ import {
     formatDateForInput,
     renderDataList,
     parseStatData,
+    settingsService,
 } from './utils.js';
 
 // State variables
@@ -95,7 +96,7 @@ function updateAll() {
 }
 
 // Initialize the history window
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     // Initialize the view to show history by default
     currentView = 'history';
     columnsContainer.classList.add('hidden');
@@ -116,9 +117,11 @@ document.addEventListener('DOMContentLoaded', () => {
     currentDateRange.startDate = startDate.toISOString();
     currentDateRange.endDate = endDate.toISOString();
 
-    // Save the initial date range to localStorage
-    localStorage.setItem('historyStartDate', currentDateRange.startDate);
-    localStorage.setItem('historyEndDate', currentDateRange.endDate);
+    // Save the initial date range to settings
+    await settingsService.updateSettings({
+        historyStartDate: currentDateRange.startDate,
+        historyEndDate: currentDateRange.endDate,
+    });
 
     // Initialize opacity slider with utility function
     initializeOpacitySlider('historyOpacitySlider', 'historyBackgroundOpacity');
@@ -214,7 +217,7 @@ async function loadFightHistory() {
 }
 
 // Apply date range filter
-function applyDateRange() {
+async function applyDateRange() {
     const startDateInput = document.getElementById('startDate').value;
     const endDateInput = document.getElementById('endDate').value;
 
@@ -234,16 +237,18 @@ function applyDateRange() {
     currentDateRange.startDate = startDate.toISOString();
     currentDateRange.endDate = endDate.toISOString();
 
-    // Save to localStorage for persistence
-    localStorage.setItem('historyStartDate', currentDateRange.startDate);
-    localStorage.setItem('historyEndDate', currentDateRange.endDate);
+    // Save to settings for persistence
+    await settingsService.updateSettings({
+        historyStartDate: currentDateRange.startDate,
+        historyEndDate: currentDateRange.endDate,
+    });
 
     console.log('Applying date range:', currentDateRange);
     loadFightHistory();
 }
 
 // Reset date range filter
-function resetDateRange() {
+async function resetDateRange() {
     // Reset to last 7 days, with end date 1 day in the future
     const endDate = new Date();
     endDate.setDate(endDate.getDate() + 1);
@@ -256,9 +261,11 @@ function resetDateRange() {
     currentDateRange.startDate = startDate.toISOString();
     currentDateRange.endDate = endDate.toISOString();
 
-    // Save to localStorage
-    localStorage.setItem('historyStartDate', currentDateRange.startDate);
-    localStorage.setItem('historyEndDate', currentDateRange.endDate);
+    // Save to settings
+    await settingsService.updateSettings({
+        historyStartDate: currentDateRange.startDate,
+        historyEndDate: currentDateRange.endDate,
+    });
 
     console.log('Resetting date range');
     loadFightHistory();

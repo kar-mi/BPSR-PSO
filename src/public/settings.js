@@ -1,4 +1,4 @@
-import { SERVER_URL, initializeOpacitySlider } from './utils.js';
+import { SERVER_URL, initializeOpacitySlider, settingsService } from './utils.js';
 
 // DOM elements
 let networkAdapterSelect, refreshAdaptersButton;
@@ -78,14 +78,9 @@ function populateNetworkAdapterSelect(adapters) {
 
 async function loadSelectedAdapter() {
     try {
-        const response = await fetch(`http://${SERVER_URL}/api/network/selected`);
-        const result = await response.json();
-
-        if (result.code === 0) {
-            networkAdapterSelect.value = result.data.selectedAdapter;
-        } else {
-            console.error('Failed to load selected adapter:', result.msg);
-        }
+        // Load from settings.json
+        const savedAdapter = await settingsService.getSetting('networkAdapter', 'auto');
+        networkAdapterSelect.value = savedAdapter;
     } catch (error) {
         console.error('Error loading selected adapter:', error);
     }
@@ -93,6 +88,10 @@ async function loadSelectedAdapter() {
 
 async function updateSelectedAdapter(selectedAdapter) {
     try {
+        // Save to settings.json
+        await settingsService.updateSetting('networkAdapter', selectedAdapter);
+
+        // Also update the server's network adapter
         const response = await fetch(`http://${SERVER_URL}/api/network/selected`, {
             method: 'POST',
             headers: {

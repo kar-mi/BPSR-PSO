@@ -27,6 +27,38 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Middleware to parse JSON requests
     router.use(express.json());
 
+    /**
+     * Helper function to safely read settings from file
+     * @returns {Promise<Object>} Current settings from file
+     */
+    async function readSettingsFromFile() {
+        try {
+            const data = await fsPromises.readFile(SETTINGS_PATH, 'utf8');
+            return JSON.parse(data);
+        } catch (error) {
+            if (error.code === 'ENOENT') {
+                // File doesn't exist, return default settings
+                return {
+                    autoClearOnServerChange: true,
+                    autoClearOnTimeout: true,
+                };
+            }
+            throw error;
+        }
+    }
+
+    /**
+     * Helper function to safely write settings to file
+     * @param {Object} newSettings - Settings to merge and save
+     * @returns {Promise<Object>} Updated settings
+     */
+    async function updateSettingsFile(newSettings) {
+        const currentSettings = await readSettingsFromFile();
+        const updatedSettings = { ...currentSettings, ...newSettings };
+        await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(updatedSettings, null, 2), 'utf8');
+        return updatedSettings;
+    }
+
     // GET all user data
     router.get('/data', (req, res) => {
         try {
@@ -46,7 +78,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     });
 
     // POST update fight timeout
-    router.post('/fight/timeout', (req, res) => {
+    router.post('/fight/timeout', async (req, res) => {
         try {
             const { timeout } = req.body;
 
@@ -58,6 +90,13 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             }
 
             userDataManager.setFightTimeout(timeout);
+
+            // Save to settings.json using helper function
+            try {
+                await updateSettingsFile({ fightTimeout: timeout });
+            } catch (error) {
+                logger.error('Failed to save fight timeout to settings:', error);
+            }
 
             res.json({
                 code: 0,
@@ -486,19 +525,25 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     });
 
     // Get current settings
-    router.get('/settings', (req, res) => {
-        const settings = userDataManager.getGlobalSettings();
-        res.json({ code: 0, data: settings });
+    router.get('/settings', async (req, res) => {
+        try {
+            const settings = await readSettingsFromFile();
+            res.json({ code: 0, data: settings });
+        } catch (error) {
+            logger.error('Failed to read settings:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to read settings',
+            });
+        }
     });
 
     // Update settings
     router.post('/settings', async (req, res) => {
         const newSettings = req.body;
-        const currentSettings = userDataManager.getGlobalSettings();
-        const updatedSettings = { ...currentSettings, ...newSettings };
 
         try {
-            await fsPromises.writeFile(SETTINGS_PATH, JSON.stringify(updatedSettings, null, 2), 'utf8');
+            const updatedSettings = await updateSettingsFile(newSettings);
             res.json({ code: 0, data: updatedSettings });
         } catch (error) {
             logger.error('Failed to save settings:', error);
