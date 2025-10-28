@@ -59,24 +59,6 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         return updatedSettings;
     }
 
-    // GET all user data
-    router.get('/data', (req, res) => {
-        try {
-            const userData = userDataManager.getAllUsersData();
-            const data = {
-                code: 0,
-                user: userData,
-            };
-            res.json(data);
-        } catch (error) {
-            logger.error('Error getting user data:', error);
-            res.status(500).json({
-                code: 1,
-                msg: 'Failed to get user data',
-            });
-        }
-    });
-
     // POST update fight timeout
     router.post('/fight/timeout', async (req, res) => {
         try {
@@ -118,16 +100,6 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             code: 0,
             timeout: userDataManager.getFightTimeout(),
         });
-    });
-
-    // GET all enemy data
-    router.get('/enemies', (req, res) => {
-        const enemiesData = userDataManager.getAllEnemiesData();
-        const data = {
-            code: 0,
-            enemy: enemiesData,
-        };
-        res.json(data);
     });
 
     // Clear all statistics
@@ -207,88 +179,6 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             code: 0,
             data: skillData,
         });
-    });
-
-    // Get history summary for a specific timestamp
-    router.get('/history/:timestamp/summary', async (req, res) => {
-        const { timestamp } = req.params;
-
-        // Security: Validate timestamp is numeric only to prevent path traversal
-        if (!TIMESTAMP_REGEX.test(timestamp)) {
-            return res.status(400).json({
-                code: 1,
-                msg: 'Invalid timestamp format',
-            });
-        }
-
-        const historyFilePath = path.join('./logs', timestamp, 'summary.json');
-
-        try {
-            const data = await fsPromises.readFile(historyFilePath, 'utf8');
-            const summaryData = JSON.parse(data);
-            res.json({
-                code: 0,
-                data: summaryData,
-            });
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                logger.warn('History summary file not found:', error);
-                res.status(404).json({
-                    code: 1,
-                    msg: 'History summary file not found',
-                });
-            } else {
-                logger.error('Failed to read history summary file:', error);
-                res.status(500).json({
-                    code: 1,
-                    msg: 'Failed to read history summary file',
-                });
-            }
-        }
-    });
-
-    // Get history data for a specific timestamp
-    router.get('/history/:timestamp/data', async (req, res) => {
-        const { timestamp } = req.params;
-
-        // Security: Validate timestamp is numeric only to prevent path traversal
-        if (!TIMESTAMP_REGEX.test(timestamp)) {
-            return res.status(400).json({
-                code: 1,
-                msg: 'Invalid timestamp format',
-            });
-        }
-
-        const historyFilePath = path.join('./logs', timestamp, 'allUserData.json');
-
-        try {
-            const data = await fsPromises.readFile(historyFilePath, 'utf8');
-            const userData = JSON.parse(data);
-
-            // Filter out users with 0 total damage
-            const filteredUserData = userData.filter((user) => {
-                return user.total_damage > 0;
-            });
-
-            res.json({
-                code: 0,
-                user: filteredUserData,
-            });
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                logger.warn('History data file not found:', error);
-                res.status(404).json({
-                    code: 1,
-                    msg: 'History data file not found',
-                });
-            } else {
-                logger.error('Failed to read history data file:', error);
-                res.status(500).json({
-                    code: 1,
-                    msg: 'Failed to read history data file',
-                });
-            }
-        }
     });
 
     // Get history skill data for a specific timestamp and user
@@ -495,33 +385,6 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
 
         const historyFilePath = path.join('./logs', timestamp, 'fight.log');
         res.download(historyFilePath, `fight_${timestamp}.log`);
-    });
-
-    // Get a list of available history timestamps
-    router.get('/history/list', async (req, res) => {
-        try {
-            const data = (await fsPromises.readdir('./logs', { withFileTypes: true }))
-                .filter((e) => e.isDirectory() && /^\d+$/.test(e.name))
-                .map((e) => e.name);
-            res.json({
-                code: 0,
-                data: data,
-            });
-        } catch (error) {
-            if (error.code === 'ENOENT') {
-                logger.warn('History path not found:', error);
-                res.status(404).json({
-                    code: 1,
-                    msg: 'History path not found',
-                });
-            } else {
-                logger.error('Failed to load history path:', error);
-                res.status(500).json({
-                    code: 1,
-                    msg: 'Failed to load history path',
-                });
-            }
-        }
     });
 
     // Get current settings
