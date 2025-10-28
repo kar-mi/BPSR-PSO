@@ -318,7 +318,14 @@ function renderFightList() {
     fightHistory.forEach((fight) => {
         const fightItem = document.createElement('div');
         fightItem.className = 'fight-item';
+        fightItem.dataset.fightId = fight.id;
         fightItem.onclick = () => viewFight(fight.id);
+
+        // Add right-click context menu
+        fightItem.addEventListener('contextmenu', (event) => {
+            event.preventDefault();
+            showContextMenu(event, fight.id);
+        });
 
         const startTime = new Date(fight.startTime);
         const endTime = new Date(fight.endTime);
@@ -747,3 +754,86 @@ function updateHistoryView() {
         document.getElementById('viewHistoryButton').classList.add('active');
     }
 }
+
+// Context menu functionality
+let contextMenuFightId = null;
+const contextMenu = document.getElementById('fightContextMenu');
+const deleteFightOption = document.getElementById('deleteFightOption');
+
+function showContextMenu(event, fightId) {
+    contextMenuFightId = fightId;
+
+    // Position the context menu at the cursor
+    contextMenu.style.left = `${event.clientX}px`;
+    contextMenu.style.top = `${event.clientY}px`;
+    contextMenu.classList.remove('hidden');
+}
+
+function hideContextMenu() {
+    contextMenu.classList.add('hidden');
+    contextMenuFightId = null;
+}
+
+// Delete fight function
+async function deleteFight(fightId) {
+    const fightToDelete = fightHistory.find(f => f.id === fightId);
+    if (!fightToDelete) {
+        alert('Fight not found');
+        return;
+    }
+
+    const startTime = new Date(fightToDelete.startTime).toLocaleString();
+    const confirmMessage = `Are you sure you want to delete this fight?\n\nFight: ${startTime}\nUsers: ${fightToDelete.userCount}\n\nThis will permanently delete the fight logs and cannot be undone.`;
+
+    if (!confirm(confirmMessage)) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`http://${SERVER_URL}/api/fight/${fightId}`, {
+            method: 'DELETE',
+        });
+
+        const data = await response.json();
+
+        if (data.code === 0) {
+            console.log(`Successfully deleted fight ${fightId}`);
+
+            // If the deleted fight is currently being viewed, go back to history
+            if (currentFightId === fightId) {
+                currentFightId = null;
+                viewFightHistory();
+            }
+
+            // Reload fight history to update the list
+            await loadFightHistory();
+        } else {
+            alert(`Failed to delete fight: ${data.msg}`);
+        }
+    } catch (error) {
+        console.error('Error deleting fight:', error);
+        alert(`Error deleting fight: ${error.message}`);
+    }
+}
+
+// Event listeners for context menu
+deleteFightOption.addEventListener('click', () => {
+    if (contextMenuFightId) {
+        deleteFight(contextMenuFightId);
+    }
+    hideContextMenu();
+});
+
+// Hide context menu when clicking outside
+document.addEventListener('click', (event) => {
+    if (!contextMenu.contains(event.target)) {
+        hideContextMenu();
+    }
+});
+
+// Hide context menu on escape key
+document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape') {
+        hideContextMenu();
+    }
+});

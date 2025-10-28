@@ -891,6 +891,50 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         }
     });
 
+    // Delete a specific fight by timestamp
+    router.delete('/fight/:fightId', async (req, res) => {
+        try {
+            const { fightId } = req.params;
+            const timestamp = fightId.replace('fight_', '');
+
+            // Security: Validate timestamp is numeric only to prevent path traversal
+            if (!TIMESTAMP_REGEX.test(timestamp)) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid fight ID format',
+                });
+            }
+
+            const logDirPath = path.join('./logs', timestamp);
+
+            // Check if the log directory exists
+            try {
+                await fsPromises.access(logDirPath);
+            } catch (error) {
+                logger.warn(`Fight log directory not found for ${timestamp}:`, error);
+                return res.status(404).json({
+                    code: 1,
+                    msg: 'Fight not found',
+                });
+            }
+
+            // Delete the entire log directory
+            await fsPromises.rm(logDirPath, { recursive: true, force: true });
+            logger.info(`Successfully deleted fight ${fightId} (directory: ${logDirPath})`);
+
+            res.json({
+                code: 0,
+                msg: 'Fight deleted successfully',
+            });
+        } catch (error) {
+            logger.error('Failed to delete fight:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to delete fight',
+            });
+        }
+    });
+
     // Get available network adapters
     router.get('/network/adapters', (req, res) => {
         try {
