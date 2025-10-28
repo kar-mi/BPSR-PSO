@@ -661,7 +661,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         }
     });
 
-    // Get specific fight data by timestamp
+    // Get specific fight data by timestamp - Parse from fight.log
     router.get('/fight/:fightId', async (req, res) => {
         try {
             const { fightId } = req.params;
@@ -676,104 +676,131 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 });
             }
 
+            // Read summary.json to get fight duration
+            const summaryPath = path.join('./logs', timestamp, 'summary.json');
+            let fightDuration = 0;
+            let fightStartTime = parseInt(timestamp);
+            let fightEndTime = parseInt(timestamp);
+
+            try {
+                await fsPromises.access(summaryPath);
+                const summaryData = JSON.parse(await fsPromises.readFile(summaryPath, 'utf8'));
+                fightDuration = summaryData.duration || 0;
+                fightStartTime = summaryData.startTime || parseInt(timestamp);
+                fightEndTime = summaryData.endTime || parseInt(timestamp);
+            } catch (error) {
+                logger.warn(`Could not read summary.json for fight ${timestamp}:`, error);
+            }
+
+            // Read allUserData.json to get user names and professions
             const userDataPath = path.join('./logs', timestamp, 'allUserData.json');
-            let userData = {};
+            let userMetadata = {};
             try {
                 await fsPromises.access(userDataPath);
-                userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+                const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
+                // Extract only metadata (name, profession, etc.)
+                for (const [uid, user] of Object.entries(userData)) {
+                    userMetadata[uid] = {
+                        name: user.name || 'Unknown',
+                        profession: user.profession || 'Unknown',
+                        hp: user.hp || 0,
+                        max_hp: user.max_hp || 0,
+                        fightPoint: user.fightPoint || 0,
+                        dead_count: user.dead_count || 0,
+                    };
+                }
             } catch (error) {
-                // allUserData.json doesn't exist, skip this fight
-                logger.warn(`Skipping fight ${timestamp}: allUserData.json not found`);
-                return;
+                logger.warn(`Could not read allUserData.json for fight ${timestamp}:`, error);
             }
 
-            let processedUserData = userData;
+            // Parse fight.log to calculate statistics
+            const logFilePath = path.join('./logs', timestamp, 'fight.log');
+            let logContent;
+            try {
+                logContent = await fsPromises.readFile(logFilePath, 'utf8');
+            } catch (error) {
+                logger.warn(`Fight log not found for ${timestamp}:`, error);
+                return res.status(404).json({
+                    code: 1,
+                    msg: 'Fight log not found',
+                });
+            }
 
-            // If enemy filter is specified, calculate per-enemy stats from fight.log
-            if (enemy && enemy !== 'all') {
-                const logFilePath = path.join('./logs', timestamp, 'fight.log');
-                const logContent = await fsPromises.readFile(logFilePath, 'utf8');
-                const lines = logContent.split('\n');
+            const lines = logContent.split('\n');
+            const userStats = {};
 
-                // Performance: Use pre-compiled regex
+            // Parse each line and accumulate stats
+            for (const line of lines) {
+                if (!line.trim()) continue;
 
-                // Track per-user stats for the specific enemy
-                const userStatsPerEnemy = {};
+                const match = line.match(LOG_PARSE_SIMPLE_REGEX);
+                if (match) {
+                    const type = match[2]; // DMG or HEAL
+                    const playerName = match[3];
+                    const playerUid = match[4];
+                    const targetName = match[5];
+                    const targetType = match[7];
+                    const value = parseInt(match[8]);
 
-                for (const line of lines) {
-                    const match = line.match(LOG_PARSE_SIMPLE_REGEX);
-                    if (match) {
-                        const type = match[2]; // DMG or HEAL
-                        const playerUid = match[4];
-                        const targetName = match[5];
-                        const targetType = match[7];
-                        const value = parseInt(match[8]);
-
-                        // Only count events against the specified enemy
-                        if (targetType === 'enemy' && targetName === enemy) {
-                            if (!userStatsPerEnemy[playerUid]) {
-                                userStatsPerEnemy[playerUid] = {
-                                    total_damage: 0,
-                                    total_healing: 0,
-                                    damage_count: 0,
-                                    healing_count: 0,
-                                };
-                            }
-
-                            if (type === 'DMG') {
-                                userStatsPerEnemy[playerUid].total_damage += value;
-                                userStatsPerEnemy[playerUid].damage_count += 1;
-                            } else if (type === 'HEAL') {
-                                userStatsPerEnemy[playerUid].total_healing += value;
-                                userStatsPerEnemy[playerUid].healing_count += 1;
-                            }
+                    // Filter by enemy if specified
+                    if (enemy && enemy !== 'all') {
+                        if (targetType !== 'enemy' || targetName !== enemy) {
+                            continue;
                         }
                     }
-                }
 
-                // Create new user data with per-enemy stats
-                processedUserData = {};
-                for (const [uid, user] of Object.entries(userData)) {
-                    const enemyStats = userStatsPerEnemy[uid];
-                    if (enemyStats) {
-                        processedUserData[uid] = {
-                            ...user,
-                            total_damage: {
-                                ...user.total_damage,
-                                total: enemyStats.total_damage,
-                            },
-                            total_healing: {
-                                ...user.total_healing,
-                                total: enemyStats.total_healing,
-                            },
-                            total_count: {
-                                ...user.total_count,
-                                total: enemyStats.damage_count + enemyStats.healing_count,
-                            },
+                    // Initialize user stats if not exists
+                    if (!userStats[playerUid]) {
+                        userStats[playerUid] = {
+                            uid: playerUid,
+                            name: userMetadata[playerUid]?.name || playerName || 'Unknown',
+                            profession: userMetadata[playerUid]?.profession || 'Unknown',
+                            hp: userMetadata[playerUid]?.hp || 0,
+                            max_hp: userMetadata[playerUid]?.max_hp || 0,
+                            fightPoint: userMetadata[playerUid]?.fightPoint || 0,
+                            dead_count: userMetadata[playerUid]?.dead_count || 0,
+                            total_damage: { total: 0, critical: 0, lucky: 0, normal: 0 },
+                            total_healing: { total: 0, critical: 0, lucky: 0, normal: 0 },
+                            total_count: { total: 0, critical: 0, lucky: 0, normal: 0 },
+                            taken_damage: 0,
                         };
+                    }
+
+                    const user = userStats[playerUid];
+
+                    // Accumulate damage/healing
+                    if (type === 'DMG') {
+                        user.total_damage.total += value;
+                        user.total_count.total += 1;
+                    } else if (type === 'HEAL') {
+                        user.total_healing.total += value;
+                        user.total_count.total += 1;
                     }
                 }
             }
 
-            // Calculate totals
+            // Calculate DPS/HPS for each user
+            const durationInSeconds = fightDuration > 0 ? fightDuration / 1000 : 1;
             let totalDamage = 0;
             let totalHealing = 0;
 
-            for (const [uid, user] of Object.entries(processedUserData)) {
-                totalDamage += user.total_damage?.total || 0;
-                totalHealing += user.total_healing?.total || 0;
+            for (const [uid, user] of Object.entries(userStats)) {
+                user.total_dps = user.total_damage.total / durationInSeconds;
+                user.total_hps = user.total_healing.total / durationInSeconds;
+                totalDamage += user.total_damage.total;
+                totalHealing += user.total_healing.total;
             }
 
             res.json({
                 code: 0,
                 data: {
                     id: fightId,
-                    startTime: parseInt(timestamp),
-                    endTime: parseInt(timestamp),
-                    duration: 0,
+                    startTime: fightStartTime,
+                    endTime: fightEndTime,
+                    duration: fightDuration,
                     totalDamage,
                     totalHealing,
-                    userStats: processedUserData,
+                    userStats: userStats,
                 },
             });
         } catch (error) {
@@ -861,6 +888,50 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                     msg: 'Failed to read fight log',
                 });
             }
+        }
+    });
+
+    // Delete a specific fight by timestamp
+    router.delete('/fight/:fightId', async (req, res) => {
+        try {
+            const { fightId } = req.params;
+            const timestamp = fightId.replace('fight_', '');
+
+            // Security: Validate timestamp is numeric only to prevent path traversal
+            if (!TIMESTAMP_REGEX.test(timestamp)) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid fight ID format',
+                });
+            }
+
+            const logDirPath = path.join('./logs', timestamp);
+
+            // Check if the log directory exists
+            try {
+                await fsPromises.access(logDirPath);
+            } catch (error) {
+                logger.warn(`Fight log directory not found for ${timestamp}:`, error);
+                return res.status(404).json({
+                    code: 1,
+                    msg: 'Fight not found',
+                });
+            }
+
+            // Delete the entire log directory
+            await fsPromises.rm(logDirPath, { recursive: true, force: true });
+            logger.info(`Successfully deleted fight ${fightId} (directory: ${logDirPath})`);
+
+            res.json({
+                code: 0,
+                msg: 'Fight deleted successfully',
+            });
+        } catch (error) {
+            logger.error('Failed to delete fight:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to delete fight',
+            });
         }
     });
 

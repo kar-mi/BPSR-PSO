@@ -1248,3 +1248,41 @@ body {
     border-radius: 3px;
     flex-shrink: 0;
 }
+
+/* Context Menu Styles */
+.context-menu {
+    position: fixed;
+    background: rgba(30, 30, 30, 0.95);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+    padding: 4px 0;
+    min-width: 150px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+    z-index: 10000;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+.context-menu-item {
+    padding: 8px 16px;
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu-item:active {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+#deleteFightOption {
+    color: #ff6b6b;
+}
+
+#deleteFightOption:hover {
+    background: rgba(255, 107, 107, 0.2);
+}
