@@ -161,12 +161,6 @@ function connectWebSocket() {
         lastWebSocketMessage = Date.now();
     });
 
-    socket.on('user_deleted', (data) => {
-        console.log(`User ${data.uid} was removed due to inactivity.`);
-        delete allUsers[data.uid];
-        updateAll();
-    });
-
     socket.on('data_cleared', () => {
         console.log('Data cleared - new fight started');
         allUsers = {};

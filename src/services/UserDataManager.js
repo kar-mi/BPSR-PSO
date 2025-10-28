@@ -61,14 +61,6 @@ class UserDataManager {
                 this.saveAllUserData();
             }, 10 * 1000)
         );
-
-        // New: Interval to clean up inactive users every 30 seconds
-        this.intervals.push(
-            setInterval(() => {
-                if (this.isShuttingDown) return;
-                this.cleanUpInactiveUsers();
-            }, 120 * 1000)
-        );
     }
 
     /**
@@ -95,19 +87,6 @@ class UserDataManager {
         return this.fightTimeout;
     }
 
-    // Method to remove users who have not been updated within the fight timeout
-    cleanUpInactiveUsers() {
-        const currentTime = Date.now();
-
-        for (const [uid, user] of this.users.entries()) {
-            if (currentTime - user.lastUpdateTime > this.inactiveTimeout) {
-                socket.emit('user_deleted', { uid });
-
-                this.users.delete(uid);
-                logger.info(`Removed inactive user with uid ${uid} (timeout: ${this.inactiveTimeout}ms)`);
-            }
-        }
-    }
     async init() {
         await this.loadUserCache();
     }
