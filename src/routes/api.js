@@ -569,6 +569,8 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                 const userData = JSON.parse(await fsPromises.readFile(userDataPath, 'utf8'));
                 // Extract only metadata (name, profession, etc.)
                 for (const [uid, user] of Object.entries(userData)) {
+                    // Note: profession already includes subProfession from UserData.toJSON()
+                    // Don't combine again to avoid duplication
                     userMetadata[uid] = {
                         name: user.name || 'Unknown',
                         profession: user.profession || 'Unknown',
