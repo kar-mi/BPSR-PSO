@@ -1,15 +1,14 @@
-name: Build and Release
-
-# This workflow only runs when a version tag is pushed (e.g., v2.8.0)
-# For testing builds in PRs, see test-build.yml
+name: Test Build (PR)
 
 on:
-    push:
-        tags:
-            - 'v*' # Triggers on version tags like v1.0.0, v2.0.1, etc.
+    pull_request:
+        branches:
+            - master
+            - main
+    workflow_dispatch: # Allow manual trigger
 
 jobs:
-    build:
+    test-build:
         runs-on: windows-latest
 
         steps:
@@ -52,12 +51,14 @@ jobs:
                       try {
                           npm ci
                           $success = $true
+                          Write-Host "✓ Dependencies installed successfully"
                       } catch {
                           $retryCount++
                           if ($retryCount -lt $maxRetries) {
                               Write-Host "Install failed, retrying ($retryCount/$maxRetries)..."
                               Start-Sleep -Seconds 5
                           } else {
+                              Write-Host "Failed to install dependencies after $maxRetries attempts"
                               throw
                           }
                       }
@@ -70,7 +71,7 @@ jobs:
                   npm_config_cache: ${{ runner.temp }}\npm-cache
                   GYP_MSVS_VERSION: 2022
 
-            - name: Build application
+            - name: Test build
               run: npm run build
               env:
                   npm_config_build_from_source: true
@@ -79,60 +80,39 @@ jobs:
                   GYP_MSVS_VERSION: 2022
               continue-on-error: false
 
-            - name: Get version from package.json
-              id: package-version
-              shell: pwsh
+            - name: Verify build output
               run: |
-                  $version = (Get-Content package.json | ConvertFrom-Json).version
-                  echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-
-            - name: Find ZIP file
-              id: find-zip
+                  if (Test-Path "dist") {
+                      Write-Host "✓ Build directory exists"
+                      $zipFiles = Get-ChildItem -Path "dist" -Filter "*.zip"
+                      if ($zipFiles.Count -gt 0) {
+                          Write-Host "✓ Found ZIP file(s):"
+                          $zipFiles | ForEach-Object { Write-Host "  - $($_.Name) ($([math]::Round($_.Length / 1MB, 2)) MB)" }
+                      } else {
+                          Write-Host "✗ No ZIP files found in dist directory"
+                          exit 1
+                      }
+                  } else {
+                      Write-Host "✗ Build directory not found"
+                      exit 1
+                  }
               shell: pwsh
+
+            - name: Upload build artifact (for inspection)
+              uses: actions/upload-artifact@v4
+              with:
+                  name: test-build-${{ github.event.pull_request.number || github.run_number }}
+                  path: dist/*.zip
+                  retention-days: 7
+                  if-no-files-found: error
+
+            - name: Build Summary
               run: |
-                  $zipFile = Get-ChildItem -Path "dist/*.zip" | Select-Object -First 1
-                  echo "ZIP_PATH=$($zipFile.FullName)" >> $env:GITHUB_OUTPUT
-                  echo "ZIP_NAME=$($zipFile.Name)" >> $env:GITHUB_OUTPUT
-
-            - name: Generate Release Notes
-              id: generate_notes
-              uses: actions/github-script@v7
-              with:
-                  result-encoding: string
-                  script: |
-                      const { data: release } = await github.rest.repos.generateReleaseNotes({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        tag_name: context.ref.replace('refs/tags/', '')
-                      });
-
-                      const installationGuide = `## Installation
-                      1. Download the ZIP file below
-                      2. Extract to any folder
-                      3. Run \`BPSR PSO.exe\`
-
-                      ## Requirements
-                      - Windows 10/11 (x64)
-                      - Npcap driver (will prompt for installation if not found)
-                      - Download Npcap: https://npcap.com/#download
-
-                      ---
-
-                      `;
-
-                      const fullBody = installationGuide + release.body;
-                      return fullBody;
-
-            - name: Create Release
-              id: create_release
-              uses: softprops/action-gh-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: ${{ github.ref_name }}
-                  name: BPSR PSO ${{ github.ref_name }}
-                  body: ${{ steps.generate_notes.outputs.result }}
-                  draft: false
-                  prerelease: false
-                  files: ${{ steps.find-zip.outputs.ZIP_PATH }}
-                  generate_release_notes: false
+                  Write-Host ""
+                  Write-Host "========================================" -ForegroundColor Green
+                  Write-Host "✓ Build completed successfully!" -ForegroundColor Green
+                  Write-Host "========================================" -ForegroundColor Green
+                  Write-Host ""
+                  Write-Host "Build artifacts have been uploaded and can be downloaded from the Actions tab."
+                  Write-Host "They will be retained for 7 days."
+              shell: pwsh
