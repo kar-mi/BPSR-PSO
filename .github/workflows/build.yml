@@ -48,34 +48,39 @@ jobs:
 
       - name: Prepare Release Body
         id: prepare_body
+        # Explicitly use PowerShell (pwsh) to use the here-string syntax
+        shell: pwsh 
         run: |
-          HEADER="## BPSR PSO ${{ github.ref_name }}
-          
-          ### Installation
-          1. Download the ZIP file below
-          2. Extract to any folder
-          3. Run \`BPSR PSO.exe\`
-          
-          ### Requirements
-          - Windows 10/11 (x64)
-          - Npcap driver (will prompt for installation if not found)
-          - https://npcap.com/#download
-          
-          ### Changes"
-          
-          # Get the changelog output from the previous step
-          CHANGELOG="${{ steps.build_changelog.outputs.changelog }}"
-          
-          # Combine the header and the changelog
-          FULL_BODY="$HEADER
-          
-          $CHANGELOG"
-          
-          # Write the combined content to a file
-          echo "$FULL_BODY" > RELEASE_BODY.md
-          
-          # Set the file path as an output for the next step
-          echo "release_body_file=RELEASE_BODY.md" >> $GITHUB_OUTPUT
+            # Use a PowerShell Here-String (@" ... "@) to define the multi-line variable
+            $HEADER = @"
+            ## BPSR PSO ${{ github.ref_name }}
+
+            ### Installation
+            1. Download the ZIP file below
+            2. Extract to any folder
+            3. Run `BPSR PSO.exe`
+
+            ### Requirements
+            - Windows 10/11 (x64)
+            - Npcap driver (will prompt for installation if not found)
+            - https://npcap.com/#download
+
+            ### Changes
+            "@
+
+            # Get the changelog output from the previous step
+            # Note: Accessing step outputs in PowerShell requires a different format
+            $CHANGELOG = "${{ steps.build_changelog.outputs.changelog }}"
+            
+            # Combine the header and the changelog
+            $FULL_BODY = "$HEADER`n`n$CHANGELOG"
+
+            # Write the combined content to a file
+            $FULL_BODY | Out-File -FilePath RELEASE_BODY.md -Encoding UTF8
+
+            # Set the file path as an output for the next step
+            # Note: Use $env:GITHUB_OUTPUT to set outputs in PowerShell
+            echo "release_body_file=RELEASE_BODY.md" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
