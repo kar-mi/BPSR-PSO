@@ -142,7 +142,8 @@ export async function findByRoute(devices) {
  */
 function loadNetworkAdapterPreference() {
     try {
-        const settingsPath = path.join('./networkSettings.json');
+        const { paths } = require('../config/paths.js');
+        const settingsPath = paths.networkSettings;
         if (fs.existsSync(settingsPath)) {
             const data = fs.readFileSync(settingsPath, 'utf8');
             const settings = JSON.parse(data);

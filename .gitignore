@@ -94,3 +94,9 @@ dist/
 #local store
 users.json
 windowConfig.json
+
+
+#Settings
+*.keybinds.json
+*.settings.json
+*.networkSettings.json

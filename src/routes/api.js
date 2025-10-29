@@ -5,6 +5,7 @@ import { promises as fsPromises } from 'fs';
 import userDataManager from '../services/UserDataManager.js';
 import { reloadSkillConfig } from '../models/UserData.js';
 import cap from 'cap';
+import { paths } from '../config/paths.js';
 
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
@@ -869,7 +870,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     // Get selected network adapter
     router.get('/network/selected', async (req, res) => {
         try {
-            const settingsPath = path.join('./networkSettings.json');
+            const settingsPath = paths.networkSettings;
             try {
                 const data = await fsPromises.readFile(settingsPath, 'utf8');
                 const settings = JSON.parse(data);
@@ -905,7 +906,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
     router.post('/network/selected', async (req, res) => {
         try {
             const { selectedAdapter } = req.body;
-            const settingsPath = path.join('./networkSettings.json');
+            const settingsPath = paths.networkSettings;
 
             const settings = {
                 selectedAdapter: selectedAdapter,

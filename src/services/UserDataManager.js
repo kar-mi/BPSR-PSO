@@ -6,12 +6,13 @@ import logger from './Logger.js';
 import fsPromises from 'fs/promises';
 import path from 'path';
 import { notifyHistoryWindowRefresh } from '../client/IpcListeners.js';
+import { paths } from '../config/paths.js';
 
 class UserDataManager {
     constructor(logger) {
         this.users = new Map();
         this.userCache = new Map();
-        this.cacheFilePath = './users.json';
+        this.cacheFilePath = paths.users;
 
         this.saveThrottleDelay = 2000;
         this.saveThrottleTimer = null;

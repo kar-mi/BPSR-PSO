@@ -2,6 +2,7 @@ import { BrowserWindow } from 'electron';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import fs from 'fs';
+import { paths } from '../config/paths.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -9,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const iconPath = path.join(__dirname, '../resources/app.ico');
 const preloadPath = path.join(__dirname, '../preload.js');
 const htmlPath = path.join(__dirname, '../public/index.html');
-const configPath = path.join(__dirname, '../../windowConfig.json');
+const configPath = paths.windowConfig;
 
 /**
  * A manager class to handle the application's main window,

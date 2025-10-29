@@ -10,12 +10,13 @@ import { PacketInterceptor } from './services/PacketInterceptor.js';
 import userDataManager from './services/UserDataManager.js';
 import socket from './services/Socket.js';
 import logger from './services/Logger.js';
+import { paths, ensureDirectories } from './config/paths.js';
 
 import skillConfig from './tables/skill_names.json' with { type: 'json' };
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SETTINGS_PATH = path.join(__dirname, 'settings.json');
+const SETTINGS_PATH = paths.settings;
 let isPaused = false;
 let globalSettings = {
     autoClearOnServerChange: true,
@@ -33,6 +34,9 @@ class Server {
             try {
                 this.resolve = resolve;
                 this.reject = reject;
+
+                // Ensure data directories exist
+                await ensureDirectories();
 
                 await this._loadGlobalSettings();
 
