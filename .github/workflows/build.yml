@@ -9,130 +9,64 @@ on:
             - 'v*' # Triggers on version tags like v1.0.0, v2.0.1, etc.
 
 jobs:
-    build:
-        runs-on: windows-latest
+  build:
+    # Your build script targets win32, so we must use a Windows runner.
+    runs-on: windows-latest 
+    steps:
+      - name: ⬇️ Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          # Fetch all history for release notes generation
+          fetch-depth: 0
 
-        steps:
-            - name: Checkout code
-              uses: actions/checkout@v4
+      - name: 🛠️ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22' # Or your required Node.js version
 
-            - name: Setup Node.js
-              uses: actions/setup-node@v4
-              with:
-                  node-version: '20'
-                  cache: 'npm'
+      - name: 📦 Install Dependencies
+        # Using npm ci is generally faster and more reliable on CI
+        run: npm ci
 
-            - name: Setup Python for node-gyp
-              uses: actions/setup-python@v5
-              with:
-                  python-version: '3.11'
+      - name: ⚙️ Install 7-Zip (Optional but recommended)
+        # This step installs 7-Zip, which your script prefers for compression.
+        # It's a standard tool on Windows images, but this ensures it.
+        run: choco install 7zip.install -y
 
-            - name: Setup MSBuild (Windows)
-              uses: microsoft/setup-msbuild@v2
+      - name: 🏗️ Run Build Script
+        # Executes your build.js file which handles:
+        # 1. Electron packaging via @electron/packager
+        # 2. Zipping the built application using 7z or PowerShell
+        run: node build.js
 
-            - name: Cache Electron and node-gyp
-              uses: actions/cache@v4
-              with:
-                  path: |
-                      ${{ runner.temp }}\electron-cache
-                      ${{ runner.temp }}\node-gyp
-                      ~\AppData\Local\electron\Cache
-                      ~\AppData\Local\node-gyp\Cache
-                  key: ${{ runner.os }}-electron-${{ hashFiles('**/package-lock.json') }}
-                  restore-keys: |
-                      ${{ runner.os }}-electron-
+      - name: 🏷️ Get Tag Name
+        id: get_tag
+        # Extracts the tag name (e.g., v1.0.0)
+        run: echo "TAG_NAME=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
+        shell: powershell
 
-            - name: Install dependencies with retries
-              run: |
-                  $maxRetries = 3
-                  $retryCount = 0
-                  $success = $false
+      - name: 📝 Generate Release Notes
+        id: release_notes
+        uses: mikepenz/release-changelog-builder-action@v5
+        with:
+          # Look for changes between the current tag and the previous one
+          toTag: ${{ steps.get_tag.outputs.TAG_NAME }}
+          configuration: |
+            {
+              "template": "## Changes\n\n{{CHANGELOG}}",
+              "pr_template": "- {{TITLE}} ([#{{NUMBER}}]({{URL}}))",
+              "empty_template": "No significant changes."
+            }
+          # Fetching the last release tag to compare against
+          fromTag: ${{ steps.get_tag.outputs.TAG_NAME }}~1 # Fallback, a more robust solution might use get_latest_release
 
-                  while (-not $success -and $retryCount -lt $maxRetries) {
-                      try {
-                          npm ci
-                          $success = $true
-                      } catch {
-                          $retryCount++
-                          if ($retryCount -lt $maxRetries) {
-                              Write-Host "Install failed, retrying ($retryCount/$maxRetries)..."
-                              Start-Sleep -Seconds 5
-                          } else {
-                              throw
-                          }
-                      }
-                  }
-              shell: pwsh
-              env:
-                  npm_config_build_from_source: true
-                  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}\.cache\electron-builder
-                  ELECTRON_CACHE: ${{ runner.temp }}\electron-cache
-                  npm_config_cache: ${{ runner.temp }}\npm-cache
-                  GYP_MSVS_VERSION: 2022
-
-            - name: Build application
-              run: npm run build
-              env:
-                  npm_config_build_from_source: true
-                  ELECTRON_BUILDER_CACHE: ${{ github.workspace }}\.cache\electron-builder
-                  ELECTRON_CACHE: ${{ runner.temp }}\electron-cache
-                  GYP_MSVS_VERSION: 2022
-              continue-on-error: false
-
-            - name: Get version from package.json
-              id: package-version
-              shell: pwsh
-              run: |
-                  $version = (Get-Content package.json | ConvertFrom-Json).version
-                  echo "VERSION=$version" >> $env:GITHUB_OUTPUT
-
-            - name: Find ZIP file
-              id: find-zip
-              shell: pwsh
-              run: |
-                  $zipFile = Get-ChildItem -Path "dist/*.zip" | Select-Object -First 1
-                  echo "ZIP_PATH=$($zipFile.FullName)" >> $env:GITHUB_OUTPUT
-                  echo "ZIP_NAME=$($zipFile.Name)" >> $env:GITHUB_OUTPUT
-
-            - name: Generate Release Notes
-              id: generate_notes
-              uses: actions/github-script@v7
-              with:
-                  result-encoding: string
-                  script: |
-                      const { data: release } = await github.rest.repos.generateReleaseNotes({
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        tag_name: context.ref.replace('refs/tags/', '')
-                      });
-
-                      const installationGuide = `## Installation
-                      1. Download the ZIP file below
-                      2. Extract to any folder
-                      3. Run \`BPSR PSO.exe\`
-
-                      ## Requirements
-                      - Windows 10/11 (x64)
-                      - Npcap driver (will prompt for installation if not found)
-                      - Download Npcap: https://npcap.com/#download
-
-                      ---
-
-                      `;
-
-                      const fullBody = installationGuide + release.body;
-                      return fullBody;
-
-            - name: Create Release
-              id: create_release
-              uses: softprops/action-gh-release@v1
-              env:
-                  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-              with:
-                  tag_name: ${{ github.ref_name }}
-                  name: BPSR PSO ${{ github.ref_name }}
-                  body: ${{ steps.generate_notes.outputs.result }}
-                  draft: false
-                  prerelease: false
-                  files: ${{ steps.find-zip.outputs.ZIP_PATH }}
-                  generate_release_notes: false
+      - name: 🚀 Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Your build script creates a ZIP named BPSR-PSO-win32-x64.zip in the 'dist' directory
+          files: dist/BPSR-PSO-win32-x64.zip
+          name: Release ${{ steps.get_tag.outputs.TAG_NAME }}
+          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
+          body: ${{ steps.release_notes.outputs.changelog }}
+          draft: false
+          prerelease: false
