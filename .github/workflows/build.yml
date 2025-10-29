@@ -32,6 +32,21 @@ jobs:
         run: echo "TAG_NAME=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         shell: powershell
 
+      - name: Get version from package.json
+        id: package-version
+        shell: pwsh
+        run: |
+          $version = (Get-Content package.json | ConvertFrom-Json).version
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+
+      - name: Find ZIP file
+        id: find-zip
+        shell: pwsh
+        run: |
+          $zipFile = Get-ChildItem -Path "dist/*.zip" | Select-Object -First 1
+          echo "ZIP_PATH=$($zipFile.FullName)" >> $env:GITHUB_OUTPUT
+          echo "ZIP_NAME=$($zipFile.Name)" >> $env:GITHUB_OUTPUT
+
       - name: Build Changelog
         id: build_changelog # <--- THIS ID IS CRITICAL
         uses: mikepenz/release-changelog-builder-action@v5 # Ensure you use a recent version
@@ -83,13 +98,36 @@ jobs:
             echo "release_body_file=RELEASE_BODY.md" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: BPSR PSO ${{ github.ref_name }}
-          # Use the file output from the previous step
-          body_path: RELEASE_BODY.md
-          files: |
-            dist/*.zip
+        id: create_release
+        uses: actions/create-release@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref_name }}
+          release_name: BPSR PSO ${{ github.ref_name }}
+          body: |
+            ## BPSR PSO ${{ github.ref_name }}
+
+            ### Installation
+            1. Download the ZIP file below
+            2. Extract to any folder
+            3. Run `BPSR PSO.exe`
+
+            ### Requirements
+            - Windows 10/11 (x64)
+            - Npcap driver (will prompt for installation if not found)
+
+            ### Changes
+            See the commit history for details.
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ steps.find-zip.outputs.ZIP_PATH }}
+          asset_name: ${{ steps.find-zip.outputs.ZIP_NAME }}
+          asset_content_type: application/zip
