@@ -1,8 +1,5 @@
 name: Build and Release
 
-# This workflow only runs when a version tag is pushed (e.g., v2.8.0)
-# For testing builds in PRs, see test-build.yml
-
 on:
     push:
         tags:
