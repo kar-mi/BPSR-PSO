@@ -12,26 +12,22 @@ jobs:
   build:
     # Your build script targets win32, so we must use a Windows runner.
     runs-on: windows-latest 
+
     steps:
-      - name: ⬇️ Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          # Fetch all history for release notes generation
-          fetch-depth: 0
 
       - name: 🛠️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22' # Or your required Node.js version
+          node-version: '20' # Or your required Node.js version
+          cache: 'npm'
 
       - name: 📦 Install Dependencies
-        run: npm install
+        run: npm ci
 
       - name: 🏗️ Run Build Script
-        # Executes your build.js file which handles:
-        # 1. Electron packaging via @electron/packager
-        # 2. Zipping the built application using 7z or PowerShell
-        run: node build.js
+        run: npm run build
 
       - name: 🏷️ Get Tag Name
         id: get_tag
@@ -39,29 +35,59 @@ jobs:
         run: echo "TAG_NAME=${{ github.ref_name }}" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
         shell: powershell
 
-      - name: 📝 Generate Release Notes
-        id: release_notes
-        uses: mikepenz/release-changelog-builder-action@v5
+      - name: Build Changelog
+        id: build_changelog # <--- THIS ID IS CRITICAL
+        uses: mikepenz/release-changelog-builder-action@v5 # Ensure you use a recent version
         with:
-          # Look for changes between the current tag and the previous one
-          mode: "COMMIT"
-          toTag: ${{ steps.get_tag.outputs.TAG_NAME }}
-          configuration: |
-            {
-              "template": "## Changes\n\n{{CHANGELOG}}",
-              "pr_template": "- {{TITLE}} ([#{{NUMBER}}]({{URL}}))",
-              "empty_template": "No significant changes."
-            }
-          # Fetching the last release tag to compare against
-          fromTag: ${{ steps.get_tag.outputs.TAG_NAME }}~1 # Fallback, a more robust solution might use get_latest_release
+            # 1. Use COMMIT mode since you are committing directly to master
+            mode: "COMMIT"
+            # 2. Define the range for the changelog (from the previous tag to the current tag)
+            # This setting is necessary for the action to compare the new tag against the last one.
+            fromTag: ${{ github.ref_name }}~1 
+            toTag: ${{ github.ref_name }}
+        env:
+            # 3. Requires a token to access Git history and tags
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: 🚀 Create GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Prepare Release Body
+        id: prepare_body
+        run: |
+          HEADER="## BPSR PSO ${{ github.ref_name }}
+          
+          ### Installation
+          1. Download the ZIP file below
+          2. Extract to any folder
+          3. Run \`BPSR PSO.exe\`
+          
+          ### Requirements
+          - Windows 10/11 (x64)
+          - Npcap driver (will prompt for installation if not found)
+          - https://npcap.com/#download
+          
+          ### Changes"
+          
+          # Get the changelog output from the previous step
+          CHANGELOG="${{ steps.build_changelog.outputs.changelog }}"
+          
+          # Combine the header and the changelog
+          FULL_BODY="$HEADER
+          
+          $CHANGELOG"
+          
+          # Write the combined content to a file
+          echo "$FULL_BODY" > RELEASE_BODY.md
+          
+          # Set the file path as an output for the next step
+          echo "release_body_file=RELEASE_BODY.md" >> $GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
         with:
-          # Your build script creates a ZIP named BPSR-PSO-win32-x64.zip in the 'dist' directory
-          files: dist/BPSR-PSO-win32-x64.zip
-          name: Release ${{ steps.get_tag.outputs.TAG_NAME }}
-          tag_name: ${{ steps.get_tag.outputs.TAG_NAME }}
-          body: ${{ steps.release_notes.outputs.changelog }}
-          draft: false
-          prerelease: false
+          tag_name: ${{ github.ref_name }}
+          name: BPSR PSO ${{ github.ref_name }}
+          # Use the file output from the previous step
+          body_path: RELEASE_BODY.md
+          files: |
+            dist/*.zip
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
