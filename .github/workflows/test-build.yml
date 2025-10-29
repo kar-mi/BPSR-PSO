@@ -65,13 +65,10 @@ jobs:
                   }
               shell: pwsh
               env:
-                  # FIX 1: Explicitly set node-gyp download location to improve stability
-                  npm_config_node_gyp_dir: $env:USERPROFILE\.cache\_node-gyp
-                  
                   npm_config_build_from_source: true
                   GYP_MSVS_VERSION: 2022
-                  
-                  # FIX 2: Ensure cache paths match the "Cache Electron and node-gyp" step
+                    
+                  # Ensure cache paths match the "Cache Electron and node-gyp" step
                   ELECTRON_CACHE: C:\Users\runneradmin\AppData\Local\electron
                   ELECTRON_BUILDER_CACHE: ~/.cache/electron-builder
                   npm_config_cache: ${{ runner.temp }}\npm-cache
