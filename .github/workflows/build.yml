@@ -50,6 +50,7 @@ jobs:
         uses: mikepenz/release-changelog-builder-action@v5
         with:
           # Look for changes between the current tag and the previous one
+          mode: "COMMIT"
           toTag: ${{ steps.get_tag.outputs.TAG_NAME }}
           configuration: |
             {
