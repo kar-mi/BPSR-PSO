@@ -12,6 +12,22 @@
         <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     </head>
     <body>
+        <!-- Update notification popup -->
+        <div id="updateNotification" class="update-notification hidden">
+            <div class="update-notification-content">
+                <button id="closeUpdateNotification" class="update-close-btn" title="Dismiss">&times;</button>
+                <h3>🎉 New Update Available!</h3>
+                <p>
+                    Version <strong id="latestVersion"></strong> is now available!<br />
+                    You're currently on version <strong id="currentVersion"></strong>
+                </p>
+                <div class="update-actions">
+                    <button id="viewReleaseBtn" class="update-btn update-btn-primary">View Release</button>
+                    <button id="dismissUpdateBtn" class="update-btn update-btn-secondary">Remind Me Later</button>
+                </div>
+            </div>
+        </div>
+
         <div id="app-wrapper">
             <!-- Resize handles -->
             <div class="resize-handle resize-handle-top"></div>

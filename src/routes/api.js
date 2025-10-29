@@ -1032,5 +1032,41 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         }
     });
 
+    // Update checker API endpoints
+    router.get('/update/check', async (req, res) => {
+        try {
+            const { default: updateChecker } = await import('../services/UpdateChecker.js');
+            const updateInfo = await updateChecker.checkForUpdates();
+            res.json({
+                code: 0,
+                data: updateInfo,
+            });
+        } catch (error) {
+            logger.error('Failed to check for updates:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to check for updates',
+            });
+        }
+    });
+
+    router.post('/update/dismiss', async (req, res) => {
+        try {
+            const { version } = req.body;
+            const { default: updateChecker } = await import('../services/UpdateChecker.js');
+            await updateChecker.saveDismissedVersion(version);
+            res.json({
+                code: 0,
+                msg: 'Update dismissed',
+            });
+        } catch (error) {
+            logger.error('Failed to dismiss update:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to dismiss update',
+            });
+        }
+    });
+
     return router;
 }
