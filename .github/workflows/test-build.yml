@@ -22,7 +22,7 @@ jobs:
       - name: 🛠️ Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20' # Or your required Node.js version
+          node-version: '22' # Or your required Node.js version
 
       - name: 📦 Install Dependencies
         # Using npm ci is generally faster and more reliable on CI
