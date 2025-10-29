@@ -60,48 +60,8 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         return updatedSettings;
     }
 
-    // POST update fight timeout
-    router.post('/fight/timeout', async (req, res) => {
-        try {
-            const { timeout } = req.body;
-
-            if (typeof timeout !== 'number' || timeout <= 0) {
-                return res.status(400).json({
-                    code: 1,
-                    msg: 'Invalid timeout value. Must be a positive number in milliseconds.',
-                });
-            }
-
-            userDataManager.setFightTimeout(timeout);
-
-            // Save to settings.json using helper function
-            try {
-                await updateSettingsFile({ fightTimeout: timeout });
-            } catch (error) {
-                logger.error('Failed to save fight timeout to settings:', error);
-            }
-
-            res.json({
-                code: 0,
-                msg: 'Fight timeout updated successfully',
-                timeout: timeout,
-            });
-        } catch (error) {
-            logger.error('Error updating fight timeout:', error);
-            res.status(500).json({
-                code: 1,
-                msg: 'Failed to update fight timeout',
-            });
-        }
-    });
-
-    // GET current fight timeout
-    router.get('/fight/timeout', (req, res) => {
-        res.json({
-            code: 0,
-            timeout: userDataManager.getFightTimeout(),
-        });
-    });
+    // Note: Fight timeout is now managed via the general /api/settings endpoint
+    // and loaded from settings.json on server startup. No real-time API needed.
 
     // Clear all statistics
     router.get('/clear', async (req, res) => {

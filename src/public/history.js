@@ -19,6 +19,7 @@ let allUsers = {};
 let userColors = {};
 let currentDateRange = { startDate: null, endDate: null };
 let currentFightId = null; // Track current fight being viewed
+let currentFightDuration = 0; // Track current fight duration in milliseconds
 let currentDataType = 'damage'; // 'damage' or 'healing'
 let currentEnemy = 'all'; // 'all' or specific enemy name
 let currentSortColumn = 'total'; // 'rank', 'name', 'total', 'dps', 'percent', 'crit', 'lucky'
@@ -33,6 +34,7 @@ const cumulativeStatsDiv = document.getElementById('cumulativeStats');
 const fightList = document.getElementById('fightList');
 const fightDetailsContainer = document.getElementById('fightDetailsContainer');
 const fightDetailsTable = document.getElementById('fightDetailsTable');
+const fightDurationDisplay = document.getElementById('fightDurationDisplay');
 const dataTypeFilter = document.getElementById('dataTypeFilter');
 const enemyFilter = document.getElementById('enemyFilter');
 
@@ -340,11 +342,18 @@ function renderFightList() {
         const totalDamage = fight.totalDamage || 0;
         const totalHealing = fight.totalHealing || 0;
         const userCount = fight.userCount || 0;
+        const duration = fight.duration || 0; // duration in milliseconds
+
+        // Format duration as MM:SS
+        const durationSeconds = Math.floor(duration / 1000);
+        const minutes = Math.floor(durationSeconds / 60);
+        const seconds = durationSeconds % 60;
+        const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
         fightItem.innerHTML = `
             <div class="fight-item-info">
                 <div class="fight-item-id">${startTime.toLocaleString()} - ${endTime.toLocaleString()}</div>
-                <div class="fight-item-time">${userCount} active user${userCount !== 1 ? 's' : ''}</div>
+                <div class="fight-item-time">${userCount} active user${userCount !== 1 ? 's' : ''} | Duration: ${durationStr}</div>
             </div>
             <div class="fight-item-stats">
                 <div class="fight-item-damage">Damage: ${formatNumber(totalDamage)}</div>
@@ -354,6 +363,19 @@ function renderFightList() {
 
         fightList.appendChild(fightItem);
     });
+}
+
+// Update fight duration display
+function updateFightDurationDisplay() {
+    if (!fightDurationDisplay) return;
+
+    // Format duration as MM:SS
+    const durationSeconds = Math.floor(currentFightDuration / 1000);
+    const minutes = Math.floor(durationSeconds / 60);
+    const seconds = durationSeconds % 60;
+    const durationStr = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    fightDurationDisplay.textContent = `Duration: ${durationStr}`;
 }
 
 // Render fight details table with statistics
@@ -638,6 +660,12 @@ async function reloadFightData(fightId, enemyFilter = 'all') {
         console.log('Fight data response:', data);
 
         if (data.code === 0) {
+            // Store fight duration
+            currentFightDuration = data.data.duration || 0;
+
+            // Update the duration display in the controls
+            updateFightDurationDisplay();
+
             // Transform historical user data to match current format
             allUsers = {};
             userColors = {};

@@ -136,6 +136,8 @@ class Server {
         try {
             const data = await fsPromises.readFile(SETTINGS_PATH, 'utf8');
             globalSettings = { ...globalSettings, ...JSON.parse(data) };
+            // Sync to config.GLOBAL_SETTINGS so UserDataManager can access it
+            config.GLOBAL_SETTINGS = globalSettings;
         } catch (e) {
             if (e.code !== 'ENOENT') {
                 logger.error('Failed to load settings:', e);
