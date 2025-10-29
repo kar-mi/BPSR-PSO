@@ -25,13 +25,7 @@ jobs:
           node-version: '22' # Or your required Node.js version
 
       - name: 📦 Install Dependencies
-        # Using npm ci is generally faster and more reliable on CI
-        run: npm ci
-
-      - name: ⚙️ Install 7-Zip (Optional but recommended)
-        # This step installs 7-Zip, which your script prefers for compression.
-        # It's a standard tool on Windows images, but this ensures it.
-        run: choco install 7zip.install -y
+        run: npm install
 
       - name: 🏗️ Run Build Script
         # Executes your build.js file which handles:
