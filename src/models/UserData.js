@@ -231,6 +231,7 @@ export class UserData {
             total_healing: { ...this.healingStats.stats },
             taken_damage: this.takenDamage,
             profession: this.profession + (this.subProfession ? ` ${this.subProfession}` : ''),
+            subProfession: this.subProfession,
             name: this.name,
             fightPoint: this.fightPoint,
             hp: this.attr.hp,

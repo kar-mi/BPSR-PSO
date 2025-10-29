@@ -12,6 +12,7 @@ import userDataManager from './services/UserDataManager.js';
 import socket from './services/Socket.js';
 import logger from './services/Logger.js';
 import { paths, ensureDirectories } from './config/paths.js';
+import { config } from './config.js';
 import updateChecker from './services/UpdateChecker.js';
 
 import skillConfig from './tables/skill_names.json' with { type: 'json' };

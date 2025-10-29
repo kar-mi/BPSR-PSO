@@ -561,7 +561,11 @@ function renderFightDetailsTable() {
         // Get profession icon
         const classIconHtml = getProfessionIconHtml(user.profession, 'small');
 
-        const displayName = user.fightPoint ? `${user.name} (${user.fightPoint})` : user.name;
+        // Include profession in display name
+        const professionText = user.profession && user.profession !== 'Unknown' ? ` - ${user.profession}` : '';
+        const displayName = user.fightPoint
+            ? `${user.name}${professionText} (${user.fightPoint})`
+            : `${user.name}${professionText}`;
 
         const colspan = showCritLucky ? '7' : '5';
         const dpsHpsDisplay = isTanking ? '-' : formatNumber(dpsHps);
