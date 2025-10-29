@@ -1,32 +1,36 @@
 const { packager } = require('@electron/packager');
 const path = require('path');
 const fs = require('fs');
-const { execSync } = require('child_process');
+const archiver = require('archiver');
 
-function check7zInstalled() {
-  try {
-    execSync('7z --help', { stdio: 'ignore' });
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
+async function createZipWithArchiver(sourceDir, zipPath) {
+    console.log('Using archiver (Node.js) for compression...');
 
-function createZipWith7z(sourceDir, zipPath) {
-  console.log('Using 7z for compression...');
-  // Delete existing zip if it exists
-  if (fs.existsSync(zipPath)) {
-    fs.unlinkSync(zipPath);
-  }
+    const output = fs.createWriteStream(zipPath);
+    const archive = archiver('zip', {
+        zlib: { level: 9 } // Sets compression level to max
+    });
 
-  const command = `7z a -tzip "${zipPath}" ".\\dist\\${sourceDir}\\*" -mx9`;
-  execSync(command, { stdio: 'inherit' });
-}
+    return new Promise((resolve, reject) => {
+        output.on('close', function() {
+            console.log(`Archive size: ${archive.pointer()} total bytes`);
+            resolve();
+        });
 
-function createZipWithPowerShell(sourceDir, zipPath) {
-  console.log('Using PowerShell Compress-Archive...');
-  const psCommand = `Compress-Archive -Path "dist\\${sourceDir}\\*" -DestinationPath "${zipPath}" -Force`;
-  execSync(psCommand, { stdio: 'inherit', shell: 'powershell.exe' });
+        archive.on('error', function(err) {
+            reject(err);
+        });
+
+        // Pipe archive data to the file
+        archive.pipe(output);
+
+        // Append the entire packaged directory contents
+        // This ensures the structure inside the zip is correct (e.g., just the app files)
+        const sourcePath = path.join('dist', sourceDir);
+        archive.directory(sourcePath, false); // 'false' means don't include the root folder itself
+
+        archive.finalize();
+    });
 }
 
 async function build() {
@@ -60,24 +64,23 @@ async function build() {
     console.log(`Built application to: ${appPaths[0]}`);
 
     // Create ZIP file
-    const distDir = path.basename(appPaths[0]);
+    const distDir = path.basename(appPaths[0]); // e.g., 'BPSR PSO-win32-x64'
     const zipName = `BPSR-PSO-win32-x64.zip`;
     const zipPath = path.join('dist', zipName);
 
     console.log('Creating ZIP archive...');
 
-    // Use 7z if available, otherwise fall back to PowerShell
-    const has7z = check7zInstalled();
-
-    if (has7z) {
-      createZipWith7z(distDir, zipPath);
-    } else {
-      console.log('7z not found, falling back to PowerShell...');
-      createZipWithPowerShell(distDir, zipPath);
+    // CALL THE NEW FUNCTION
+    try {
+        await createZipWithArchiver(distDir, zipPath);
+    } catch (error) {
+        console.error('ZIP creation failed:', error);
+        process.exit(1);
     }
 
     console.log(`Created ZIP: ${zipPath}`);
     console.log('Build completed successfully!');
+
   } catch (error) {
     console.error('Build failed:', error);
     process.exit(1);

@@ -315,7 +315,7 @@ function renderCumulativeStats() {
     `;
 }
 
-// Render fight list
+// Render fight list with boss headers
 function renderFightList() {
     if (!fightHistory || fightHistory.length === 0) {
         fightList.innerHTML = '<p>No fight history available in this date range</p>';
@@ -324,7 +324,28 @@ function renderFightList() {
 
     fightList.innerHTML = '';
 
+    // Group fights by boss
+    let lastBossName = null;
+
     fightHistory.forEach((fight) => {
+        const currentBossName = fight.bossName || 'Unknown';
+
+        // Add boss header if the boss changed
+        if (currentBossName !== lastBossName) {
+            const bossHeader = document.createElement('div');
+            bossHeader.className = 'boss-header';
+
+            // Build header text with dungeon name if available
+            let headerText = currentBossName;
+            if (fight.dungeonName) {
+                headerText = `${fight.dungeonName} - ${currentBossName}`;
+            }
+
+            bossHeader.innerHTML = `<h3>${headerText}</h3>`;
+            fightList.appendChild(bossHeader);
+            lastBossName = currentBossName;
+        }
+
         const fightItem = document.createElement('div');
         fightItem.className = 'fight-item';
         fightItem.dataset.fightId = fight.id;

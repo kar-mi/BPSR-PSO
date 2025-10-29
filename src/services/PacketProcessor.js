@@ -595,6 +595,8 @@ export class PacketProcessor {
                     if (name) {
                         logger.info(`Found monster name ${name} for id ${enemyUid}`);
                         userDataManager.enemyCache.name.set(enemyUid, name);
+                        // Track if this enemy is a boss
+                        userDataManager.trackEnemyEncounter(String(attrId), name);
                     }
                     break;
                 }
