@@ -91,12 +91,19 @@ typings/
 # Electron-Builder
 dist/
 
-#local store
+# User-specific settings and data (from paths.js)
+# These files store user preferences, window positions, and local state
+settings.json
 users.json
 windowConfig.json
+keybinds.json
+networkSettings.json
 
+# Settings in any subdirectory
+**/settings.json
+**/users.json
+**/windowConfig.json
+**/keybinds.json
+**/networkSettings.json
 
-#Settings
-*.keybinds.json
-*.settings.json
-*.networkSettings.json
+**/.vscode/*

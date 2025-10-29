@@ -1296,3 +1296,112 @@ body {
 #deleteFightOption:hover {
     background: rgba(255, 107, 107, 0.2);
 }
+
+/* Update Notification Popup */
+.update-notification {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    pointer-events: auto;
+    animation: slideDown 0.3s ease-out;
+}
+
+.update-notification.hidden {
+    display: none;
+}
+
+@keyframes slideDown {
+    from {
+        transform: translateX(-50%) translateY(-20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(-50%) translateY(0);
+        opacity: 1;
+    }
+}
+
+.update-notification-content {
+    background: linear-gradient(135deg, rgba(40, 40, 60, 0.98) 0%, rgba(30, 30, 50, 0.98) 100%);
+    border: 2px solid rgba(100, 150, 255, 0.5);
+    border-radius: 12px;
+    padding: 20px 24px;
+    min-width: 350px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+    position: relative;
+}
+
+.update-close-btn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: transparent;
+    border: none;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 24px;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+    transition: color 0.2s ease;
+}
+
+.update-close-btn:hover {
+    color: rgba(255, 255, 255, 1);
+}
+
+.update-notification-content h3 {
+    margin: 0 0 12px 0;
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.update-notification-content p {
+    margin: 0 0 16px 0;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.update-notification-content strong {
+    color: rgba(100, 200, 255, 1);
+}
+
+.update-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+}
+
+.update-btn {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 6px;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.update-btn-primary {
+    background: rgba(100, 150, 255, 0.9);
+    color: #fff;
+}
+
+.update-btn-primary:hover {
+    background: rgba(100, 150, 255, 1);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(100, 150, 255, 0.4);
+}
+
+.update-btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.update-btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.15);
+}

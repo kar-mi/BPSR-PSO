@@ -5,14 +5,18 @@ import net from 'net';
 import path from 'path';
 import fsPromises from 'fs/promises';
 import { fileURLToPath } from 'url';
+import { createRequire } from 'module';
 import { createApiRouter } from './routes/api.js';
 import { PacketInterceptor } from './services/PacketInterceptor.js';
 import userDataManager from './services/UserDataManager.js';
 import socket from './services/Socket.js';
 import logger from './services/Logger.js';
 import { paths, ensureDirectories } from './config/paths.js';
+import updateChecker from './services/UpdateChecker.js';
 
 import skillConfig from './tables/skill_names.json' with { type: 'json' };
+
+const require = createRequire(import.meta.url);
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +43,11 @@ class Server {
                 await ensureDirectories();
 
                 await this._loadGlobalSettings();
+
+                // Initialize update checker with current version
+                const packageJson = require('../package.json');
+                await updateChecker.init(packageJson.version);
+                logger.info(`Application version: ${packageJson.version}`);
 
                 const app = express();
                 app.use(cors());

@@ -439,6 +439,69 @@ function initializeResizeHandles() {
     });
 }
 
+// Update notification functions
+let updateNotificationData = null;
+
+function initializeUpdateNotification() {
+    const updateNotification = document.getElementById('updateNotification');
+    const closeUpdateBtn = document.getElementById('closeUpdateNotification');
+    const viewReleaseBtn = document.getElementById('viewReleaseBtn');
+    const dismissUpdateBtn = document.getElementById('dismissUpdateBtn');
+
+    closeUpdateBtn.addEventListener('click', () => {
+        updateNotification.classList.add('hidden');
+    });
+
+    viewReleaseBtn.addEventListener('click', () => {
+        if (updateNotificationData && updateNotificationData.releaseUrl) {
+            // Open release URL in default browser
+            window.open(updateNotificationData.releaseUrl, '_blank');
+        }
+        updateNotification.classList.add('hidden');
+    });
+
+    dismissUpdateBtn.addEventListener('click', async () => {
+        if (updateNotificationData) {
+            // Save dismissed version so we don't show it again
+            try {
+                await fetch(`http://${SERVER_URL}/api/update/dismiss`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ version: updateNotificationData.latestVersion }),
+                });
+            } catch (error) {
+                console.error('Failed to save dismissed version:', error);
+            }
+        }
+        updateNotification.classList.add('hidden');
+    });
+}
+
+async function checkForUpdates() {
+    try {
+        const response = await fetch(`http://${SERVER_URL}/api/update/check`);
+        const data = await response.json();
+
+        if (data.code === 0 && data.data.updateAvailable) {
+            updateNotificationData = data.data;
+            showUpdateNotification(data.data);
+        }
+    } catch (error) {
+        console.error('Failed to check for updates:', error);
+    }
+}
+
+function showUpdateNotification(updateData) {
+    const updateNotification = document.getElementById('updateNotification');
+    const currentVersionEl = document.getElementById('currentVersion');
+    const latestVersionEl = document.getElementById('latestVersion');
+
+    currentVersionEl.textContent = updateData.currentVersion;
+    latestVersionEl.textContent = updateData.latestVersion;
+
+    updateNotification.classList.remove('hidden');
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeDOMElements();
     initialize();
@@ -479,6 +542,10 @@ document.addEventListener('DOMContentLoaded', () => {
     window.electronAPI.onTriggerClearData(() => {
         clearData();
     });
+
+    // Initialize update checker
+    initializeUpdateNotification();
+    checkForUpdates();
 });
 
 window.clearData = clearData;
