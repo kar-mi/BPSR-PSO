@@ -1,12 +1,9 @@
 import { globalShortcut } from 'electron';
 import window from './Window.js';
 import fs from 'fs';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import { paths } from '../config/paths.js';
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-const keybindsPath = path.join(__dirname, '../../keybinds.json');
+const keybindsPath = paths.keybinds;
 
 /**
  * Manages all keyboard shortcuts for the application with remapping support.
