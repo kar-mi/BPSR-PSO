@@ -750,9 +750,31 @@ body {
 .fight-list {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 0;
     max-height: 300px;
     overflow-y: auto;
+}
+
+/* Boss header styling */
+.boss-header {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin: 12px 0 0 0;
+    padding: 4px 8px;
+    background: linear-gradient(135deg, rgba(100, 50, 200, 0.3) 0%, rgba(80, 40, 160, 0.3) 100%);
+    border-left: 3px solid rgba(150, 100, 255, 0.8);
+    border-radius: 3px;
+    backdrop-filter: blur(8px);
+}
+
+.boss-header h3 {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: rgba(200, 180, 255, 1);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    letter-spacing: 0.3px;
 }
 
 .fight-item {
