@@ -6,6 +6,7 @@ import userDataManager from '../services/UserDataManager.js';
 import { reloadSkillConfig } from '../models/UserData.js';
 import cap from 'cap';
 import { paths } from '../config/paths.js';
+import dungeonMapping from '../tables/dungeon_mapping.json' with { type: 'json' };
 
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
@@ -448,6 +449,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
 
                     // Load boss information if available
                     let bossName = null;
+                    let dungeonName = null;
                     const bossFilePath = path.join('./logs', timestamp.toString(), 'encountered_boss.json');
                     try {
                         await fsPromises.access(bossFilePath);
@@ -460,6 +462,10 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                                 // Multiple bosses - show count
                                 bossName = `${bossData[0].displayName || bossData[0].name} +${bossData.length - 1}`;
                             }
+
+                            // Map boss to dungeon
+                            const primaryBossName = bossData[0].displayName || bossData[0].name;
+                            dungeonName = dungeonMapping[primaryBossName] || null;
                         }
                     } catch (error) {
                         // Boss file doesn't exist, leave as null
@@ -474,6 +480,7 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                         totalHealing,
                         userCount,
                         bossName, // Boss name or null if unknown
+                        dungeonName, // Dungeon name or null if unknown
                     });
                 } catch (error) {
                     logger.warn(`Failed to read log data for timestamp ${timestamp}:`, error);

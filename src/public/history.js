@@ -334,7 +334,14 @@ function renderFightList() {
         if (currentBossName !== lastBossName) {
             const bossHeader = document.createElement('div');
             bossHeader.className = 'boss-header';
-            bossHeader.innerHTML = `<h3>${currentBossName}</h3>`;
+
+            // Build header text with dungeon name if available
+            let headerText = currentBossName;
+            if (fight.dungeonName) {
+                headerText = `${fight.dungeonName} - ${currentBossName}`;
+            }
+
+            bossHeader.innerHTML = `<h3>${headerText}</h3>`;
             fightList.appendChild(bossHeader);
             lastBossName = currentBossName;
         }
