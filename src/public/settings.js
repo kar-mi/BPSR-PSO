@@ -78,20 +78,24 @@ function populateNetworkAdapterSelect(adapters) {
 
 async function loadSelectedAdapter() {
     try {
-        // Load from settings.json
-        const savedAdapter = await settingsService.getSetting('networkAdapter', 'auto');
-        networkAdapterSelect.value = savedAdapter;
+        // Load from networkSettings.json via dedicated API
+        const response = await fetch(`http://${SERVER_URL}/api/network/selected`);
+        const result = await response.json();
+        if (result.code === 0) {
+            networkAdapterSelect.value = result.data.selectedAdapter || 'auto';
+        } else {
+            console.error('Failed to load selected adapter:', result.msg);
+            networkAdapterSelect.value = 'auto';
+        }
     } catch (error) {
         console.error('Error loading selected adapter:', error);
+        networkAdapterSelect.value = 'auto';
     }
 }
 
 async function updateSelectedAdapter(selectedAdapter) {
     try {
-        // Save to settings.json
-        await settingsService.updateSetting('networkAdapter', selectedAdapter);
-
-        // Also update the server's network adapter
+        // Save to networkSettings.json via dedicated API
         const response = await fetch(`http://${SERVER_URL}/api/network/selected`, {
             method: 'POST',
             headers: {
@@ -121,18 +125,11 @@ function updateTimeoutValue() {
 
 async function loadInitialTimeout() {
     try {
-        const response = await fetch(`http://${SERVER_URL}/api/fight/timeout`);
-        if (response.ok) {
-            const result = await response.json();
-            if (result.code === 0) {
-                const timeoutSeconds = result.timeout / 1000;
-                timeoutSlider.value = timeoutSeconds;
-                updateTimeoutValue();
-            }
-        } else {
-            console.error('Failed to load initial timeout:', response.status);
-            updateTimeoutValue();
-        }
+        // Load from settings.json file
+        const savedTimeout = await settingsService.getSetting('fightTimeout', 15000); // default 15 seconds in ms
+        const timeoutSeconds = savedTimeout / 1000;
+        timeoutSlider.value = timeoutSeconds;
+        updateTimeoutValue();
     } catch (error) {
         console.error('Error loading initial timeout:', error);
         updateTimeoutValue();
@@ -141,20 +138,9 @@ async function loadInitialTimeout() {
 
 async function updateFightTimeout(seconds) {
     try {
-        const response = await fetch(`http://${SERVER_URL}/api/fight/timeout`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ timeout: seconds * 1000 }),
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log('Fight timeout updated successfully:', result);
-        } else {
-            console.error('Failed to update fight timeout:', response.status, response.statusText);
-        }
+        // Save to settings.json file (value in milliseconds)
+        await settingsService.updateSetting('fightTimeout', seconds * 1000);
+        console.log('Fight timeout updated successfully. Restart required for changes to take effect.');
     } catch (error) {
         console.error('Error updating fight timeout:', error);
     }

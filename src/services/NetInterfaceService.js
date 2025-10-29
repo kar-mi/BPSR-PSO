@@ -1,7 +1,7 @@
 import { exec } from 'child_process';
 import cap from 'cap';
 import fs from 'fs';
-import path from 'path';
+import { paths } from '../config/paths.js';
 
 const VIRTUAL_KEYWORDS = ['zerotier', 'vmware', 'hyper-v', 'virtual', 'loopback', 'tap', 'bluetooth', 'wan miniport'];
 
@@ -142,7 +142,6 @@ export async function findByRoute(devices) {
  */
 function loadNetworkAdapterPreference() {
     try {
-        const { paths } = require('../config/paths.js');
         const settingsPath = paths.networkSettings;
         if (fs.existsSync(settingsPath)) {
             const data = fs.readFileSync(settingsPath, 'utf8');
@@ -167,7 +166,9 @@ export async function findDefaultNetworkDevice(devices) {
     if (preference !== 'auto') {
         const preferredIndex = parseInt(preference, 10);
         if (!isNaN(preferredIndex) && devices[preferredIndex]) {
-            console.log(`Using user-selected network adapter: ${preferredIndex} - ${devices[preferredIndex].description}`);
+            console.log(
+                `Using user-selected network adapter: ${preferredIndex} - ${devices[preferredIndex].description}`
+            );
             return preferredIndex;
         } else {
             console.warn(`Saved network adapter ${preference} not found or invalid. Falling back to auto-detection.`);
