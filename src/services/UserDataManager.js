@@ -7,6 +7,7 @@ import fsPromises from 'fs/promises';
 import path from 'path';
 import { notifyHistoryWindowRefresh } from '../client/IpcListeners.js';
 import { paths } from '../config/paths.js';
+import bossData from '../tables/boss.json' with { type: 'json' };
 
 class UserDataManager {
     constructor(logger) {
@@ -29,6 +30,9 @@ class UserDataManager {
             hp: new Map(),
             maxHp: new Map(),
         };
+
+        // Track encountered bosses during the fight
+        this.encounteredBosses = new Set();
 
         // Track intervals for cleanup
         this.intervals = [];
@@ -257,6 +261,24 @@ class UserDataManager {
         this.logLock.release();
     }
 
+    /**
+     * Track enemy encounter and check if it's a boss
+     * @param {string} enemyId - The enemy ID
+     * @param {string} enemyName - The enemy name
+     */
+    trackEnemyEncounter(enemyId, enemyName) {
+        // Check if this enemy ID is a boss
+        if (bossData[enemyId]) {
+            const bossName = bossData[enemyId];
+            this.encounteredBosses.add(JSON.stringify({
+                id: enemyId,
+                name: bossName,
+                displayName: enemyName || bossName
+            }));
+            logger.debug(`Boss encountered: ${bossName} (ID: ${enemyId})`);
+        }
+    }
+
     setProfession(uid, profession) {
         const user = this.getUser(uid);
         if (user.profession !== profession) {
@@ -390,6 +412,7 @@ class UserDataManager {
         this.startTime = Date.now();
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
+        this.encounteredBosses.clear(); // Clear boss tracking for new fight
         await this.saveAllUserData(usersToSave, saveStartTime);
 
         // Emit clear event to frontend
@@ -462,6 +485,18 @@ class UserDataManager {
                 await fsPromises.writeFile(userDataPath, JSON.stringify(userData, null, 2), 'utf8');
             }
             await fsPromises.writeFile(path.join(logDir, 'summary.json'), JSON.stringify(summary, null, 2), 'utf8');
+
+            // Save encountered bosses
+            if (this.encounteredBosses.size > 0) {
+                const bossesArray = Array.from(this.encounteredBosses).map(bossStr => JSON.parse(bossStr));
+                await fsPromises.writeFile(
+                    path.join(logDir, 'encountered_boss.json'),
+                    JSON.stringify(bossesArray, null, 2),
+                    'utf8'
+                );
+                logger.debug(`Saved ${bossesArray.length} encountered boss(es) to ${logDir}`);
+            }
+
             logger.debug(`Saved data for ${summary.userCount} users to ${logDir}`);
         } catch (error) {
             logger.error('Failed to save all user data:', error);
