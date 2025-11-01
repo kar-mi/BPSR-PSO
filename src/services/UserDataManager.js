@@ -29,6 +29,7 @@ class UserDataManager {
             name: new Map(),
             hp: new Map(),
             maxHp: new Map(),
+            attrId: new Map(), // Track attrId for each entity
         };
 
         // Track encountered bosses during the fight
@@ -381,12 +382,14 @@ class UserDataManager {
             ...this.enemyCache.name.keys(),
             ...this.enemyCache.hp.keys(),
             ...this.enemyCache.maxHp.keys(),
+            ...this.enemyCache.attrId.keys(),
         ]);
         enemyIds.forEach((id) => {
             result[id] = {
                 name: this.enemyCache.name.get(id),
                 hp: this.enemyCache.hp.get(id),
                 max_hp: this.enemyCache.maxHp.get(id),
+                attr_id: this.enemyCache.attrId.get(id),
             };
         });
         return result;
@@ -396,12 +399,14 @@ class UserDataManager {
         this.enemyCache.name.delete(id);
         this.enemyCache.hp.delete(id);
         this.enemyCache.maxHp.delete(id);
+        this.enemyCache.attrId.delete(id);
     }
 
     refreshEnemyCache() {
         this.enemyCache.name.clear();
         this.enemyCache.hp.clear();
         this.enemyCache.maxHp.clear();
+        this.enemyCache.attrId.clear();
     }
 
     async clearAll() {
