@@ -282,19 +282,49 @@ export class PacketProcessor {
                         targetUuid.toNumber()
                     );
                 } else {
-                    userDataManager.addTakenDamage(targetUuid.toNumber(), damage.toNumber(), isDead);
+                    const targetId = targetUuid.toNumber();
+                    userDataManager.addTakenDamage(targetId, damage.toNumber(), isDead);
+
+                    // Track damage event for death report
+                    const attackerId = attackerUuid.toNumber();
+                    let attackerName = 'Unknown';
+                    let attackerAttrId = null;
+
+                    if (isAttackerPlayer) {
+                        const attacker = userDataManager.getUser(attackerId);
+                        attackerName = attacker.name || 'Unknown';
+                    } else {
+                        attackerName = userDataManager.enemyCache.name.get(attackerId) || 'Unknown Enemy';
+                        attackerAttrId = userDataManager.enemyCache.attrId.get(attackerId);
+                    }
+
+                    userDataManager.trackDamageEventForDeathReport(targetId, {
+                        timestamp: Date.now(),
+                        attackerName,
+                        attackerAttrId,
+                        attackerId,
+                        isAttackerPlayer,
+                        skillId,
+                        damage: damage.toNumber(),
+                        damageSource,
+                        damageElement,
+                    });
                 }
                 if (isDead) {
                     const targetId = targetUuid.toNumber();
                     userDataManager.setAttrKV(targetId, 'hp', 0);
                     // Log player death
                     const playerName = userDataManager.getUser(targetId).name || 'Unknown';
+                    const attackerId = attackerUuid.toNumber();
                     const killerName = isAttackerPlayer
-                        ? (userDataManager.getUser(attackerUuid.toNumber()).name || 'Unknown')
-                        : (userDataManager.enemyCache.name.get(attackerUuid.toNumber()) || 'Unknown Enemy');
+                        ? (userDataManager.getUser(attackerId).name || 'Unknown')
+                        : (userDataManager.enemyCache.name.get(attackerId) || 'Unknown Enemy');
                     const deathLog = `[DEATH] Player: ${playerName}#${targetId} killed by ${killerName}`;
                     logger.info(deathLog);
                     userDataManager.addLog(deathLog);
+
+                    // Record death event with recent damage context
+                    userDataManager.recordPlayerDeath(targetId, playerName, killerName, isAttackerPlayer);
                 }
             } else {
                 if (!isHeal && isAttackerPlayer) {

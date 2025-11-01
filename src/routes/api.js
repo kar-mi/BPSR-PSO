@@ -7,6 +7,7 @@ import { reloadSkillConfig } from '../models/UserData.js';
 import cap from 'cap';
 import { paths } from '../config/paths.js';
 import dungeonMapping from '../tables/dungeon_mapping.json' with { type: 'json' };
+import skillNames from '../tables/skill_names.json' with { type: 'json' };
 
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
@@ -789,6 +790,50 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         }
     });
 
+    // Get death events for a specific fight
+    router.get('/fight/:fightId/deaths', async (req, res) => {
+        try {
+            const { fightId } = req.params;
+            const timestamp = fightId.replace('fight_', '');
+
+            // Security: Validate timestamp is numeric only to prevent path traversal
+            if (!TIMESTAMP_REGEX.test(timestamp)) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid fight ID format',
+                });
+            }
+
+            const deathEventsPath = path.join('./logs', timestamp, 'death_events.json');
+
+            // Check if death events file exists
+            try {
+                await fsPromises.access(deathEventsPath);
+            } catch (error) {
+                // No death events for this fight
+                return res.json({
+                    code: 0,
+                    data: [],
+                });
+            }
+
+            // Read and parse death events
+            const deathEventsData = await fsPromises.readFile(deathEventsPath, 'utf8');
+            const deathEvents = JSON.parse(deathEventsData);
+
+            res.json({
+                code: 0,
+                data: deathEvents,
+            });
+        } catch (error) {
+            logger.error('Failed to fetch death events:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to fetch death events',
+            });
+        }
+    });
+
     // Delete a specific fight by timestamp
     router.delete('/fight/:fightId', async (req, res) => {
         try {
@@ -829,6 +874,22 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             res.status(500).json({
                 code: 1,
                 msg: 'Failed to delete fight',
+            });
+        }
+    });
+
+    // Get skill names mapping
+    router.get('/skill-names', (req, res) => {
+        try {
+            res.json({
+                code: 0,
+                data: skillNames.skill_names,
+            });
+        } catch (error) {
+            logger.error('Failed to get skill names:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to get skill names',
             });
         }
     });

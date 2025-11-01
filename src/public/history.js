@@ -664,6 +664,9 @@ async function viewFight(fightId) {
     // Load enemies for this fight and populate dropdown
     await loadFightEnemies(fightId);
 
+    // Load death events and update button
+    await loadDeathEvents();
+
     // Load the fight data
     await reloadFightData(fightId, 'all');
 }
@@ -895,5 +898,155 @@ document.addEventListener('click', (event) => {
 document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape') {
         hideContextMenu();
+        closeDeathReportModal();
     }
 });
+
+// Death Report Functionality
+let skillNamesMap = {};
+const deathReportButton = document.getElementById('deathReportButton');
+const deathCountSpan = document.getElementById('deathCount');
+const deathReportModal = document.getElementById('deathReportModal');
+const closeDeathReportModalBtn = document.getElementById('closeDeathReportModal');
+const deathReportContent = document.getElementById('deathReportContent');
+
+// Load skill names on init
+async function loadSkillNames() {
+    try {
+        const response = await fetch(`http://${SERVER_URL}/api/skill-names`);
+        const data = await response.json();
+        if (data.code === 0) {
+            skillNamesMap = data.data;
+        }
+    } catch (error) {
+        console.error('Failed to load skill names:', error);
+    }
+}
+
+// Load death events for current fight
+async function loadDeathEvents() {
+    if (!currentFightId) return;
+
+    try {
+        const response = await fetch(`http://${SERVER_URL}/api/fight/${currentFightId}/deaths`);
+        const data = await response.json();
+
+        if (data.code === 0) {
+            const deathEvents = data.data || [];
+            deathCountSpan.textContent = deathEvents.length;
+
+            // Enable/disable button based on death count
+            if (deathEvents.length > 0) {
+                deathReportButton.disabled = false;
+            } else {
+                deathReportButton.disabled = true;
+            }
+
+            return deathEvents;
+        }
+    } catch (error) {
+        console.error('Failed to load death events:', error);
+        return [];
+    }
+}
+
+// Show death report modal
+async function showDeathReport() {
+    const deathEvents = await loadDeathEvents();
+
+    if (!deathEvents || deathEvents.length === 0) {
+        deathReportContent.innerHTML = '<div class="no-deaths-message">No player deaths in this fight</div>';
+    } else {
+        renderDeathReport(deathEvents);
+    }
+
+    deathReportModal.classList.remove('hidden');
+}
+
+// Close death report modal
+function closeDeathReportModal() {
+    deathReportModal.classList.add('hidden');
+}
+
+// Render death report
+function renderDeathReport(deathEvents) {
+    let html = '';
+
+    for (const deathEvent of deathEvents) {
+        const deathTime = new Date(deathEvent.timestamp);
+        const timeStr = deathTime.toLocaleTimeString();
+
+        html += `
+            <div class="death-event">
+                <div class="death-event-header">
+                    <div>
+                        <div class="death-event-victim">${deathEvent.playerName}</div>
+                        <div class="death-event-killer">Killed by: ${deathEvent.killerName}</div>
+                    </div>
+                    <div class="death-event-time">${timeStr}</div>
+                </div>
+                <div class="damage-events">
+                    <h4 style="color: rgba(255,255,255,0.7); font-size: 13px; margin-bottom: 8px;">Last 5 Damage Events</h4>
+                    ${renderDamageEventsTable(deathEvent.recentDamage)}
+                </div>
+            </div>
+        `;
+    }
+
+    deathReportContent.innerHTML = html;
+}
+
+// Render damage events table
+function renderDamageEventsTable(damageEvents) {
+    if (!damageEvents || damageEvents.length === 0) {
+        return '<p style="color: rgba(255,255,255,0.5); font-size: 12px;">No damage events recorded</p>';
+    }
+
+    let html = `
+        <table class="damage-events-table">
+            <thead>
+                <tr>
+                    <th>Source</th>
+                    <th>Skill</th>
+                    <th style="text-align: right;">Damage</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    for (const event of damageEvents) {
+        const skillName = skillNamesMap[event.skillId] || `Skill ${event.skillId}`;
+        const attackerDisplay = event.attackerAttrId
+            ? `${event.attackerName}[${event.attackerAttrId}]`
+            : event.attackerName;
+
+        html += `
+            <tr>
+                <td class="damage-source">${attackerDisplay}</td>
+                <td class="skill-name">${skillName}</td>
+                <td class="damage-value">${formatNumber(event.damage)}</td>
+            </tr>
+        `;
+    }
+
+    html += `
+            </tbody>
+        </table>
+    `;
+
+    return html;
+}
+
+// Event listeners
+deathReportButton.addEventListener('click', showDeathReport);
+closeDeathReportModalBtn.addEventListener('click', closeDeathReportModal);
+
+// Close modal when clicking outside
+deathReportModal.addEventListener('click', (event) => {
+    if (event.target === deathReportModal) {
+        closeDeathReportModal();
+    }
+});
+
+// Load skill names on init
+loadSkillNames();

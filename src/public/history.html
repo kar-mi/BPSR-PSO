@@ -40,6 +40,9 @@
                 <div id="fightDetailsContainer" class="hidden">
                     <div class="fight-details-controls">
                         <div id="fightDurationDisplay" class="fight-duration">Duration: --:--</div>
+                        <button id="deathReportButton" class="death-report-button" title="View Death Report">
+                            💀 Deaths (<span id="deathCount">0</span>)
+                        </button>
                         <select id="dataTypeFilter" class="data-type-selector">
                             <option value="damage">Damage</option>
                             <option value="healing">Healing</option>
@@ -81,6 +84,20 @@
         <div id="fightContextMenu" class="context-menu hidden">
             <div class="context-menu-item" id="deleteFightOption">Delete Fight</div>
         </div>
+
+        <!-- Death Report Modal -->
+        <div id="deathReportModal" class="modal hidden">
+            <div class="modal-content death-report-modal">
+                <div class="modal-header">
+                    <h2>Death Report</h2>
+                    <button class="modal-close" id="closeDeathReportModal">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <div id="deathReportContent" class="death-report-content"></div>
+                </div>
+            </div>
+        </div>
+
         <script type="module" src="history.js"></script>
     </body>
 </html>
