@@ -40,6 +40,9 @@
                 <div id="fightDetailsContainer" class="hidden">
                     <div class="fight-details-controls">
                         <div id="fightDurationDisplay" class="fight-duration">Duration: --:--</div>
+                        <button id="deathReportButton" class="death-report-button" title="View Death Report">
+                            💀 Deaths (<span id="deathCount">0</span>)
+                        </button>
                         <select id="dataTypeFilter" class="data-type-selector">
                             <option value="damage">Damage</option>
                             <option value="healing">Healing</option>
@@ -81,6 +84,7 @@
         <div id="fightContextMenu" class="context-menu hidden">
             <div class="context-menu-item" id="deleteFightOption">Delete Fight</div>
         </div>
+
         <script type="module" src="history.js"></script>
     </body>
 </html>

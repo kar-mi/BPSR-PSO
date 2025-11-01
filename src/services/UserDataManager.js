@@ -29,10 +29,18 @@ class UserDataManager {
             name: new Map(),
             hp: new Map(),
             maxHp: new Map(),
+            attrId: new Map(), // Track attrId for each entity
         };
 
         // Track encountered bosses during the fight
         this.encounteredBosses = new Set();
+
+        // Track recent damage events for death reports (playerId -> array of recent damage events)
+        this.recentDamageEvents = new Map();
+        this.maxRecentDamageEvents = 5; // Keep last 5 damage events per player
+
+        // Track death events with context
+        this.deathEvents = [];
 
         // Track intervals for cleanup
         this.intervals = [];
@@ -220,6 +228,62 @@ class UserDataManager {
     }
 
     /**
+     * Track a damage event for death report
+     * @param {number} playerId - Player who took damage
+     * @param {object} damageEvent - Damage event details
+     */
+    trackDamageEventForDeathReport(playerId, damageEvent) {
+        if (!this.recentDamageEvents.has(playerId)) {
+            this.recentDamageEvents.set(playerId, []);
+        }
+        const events = this.recentDamageEvents.get(playerId);
+        events.push(damageEvent);
+
+        // Keep only the last N events
+        if (events.length > this.maxRecentDamageEvents) {
+            events.shift();
+        }
+    }
+
+    /**
+     * Record a player death with recent damage context
+     * @param {number} playerId - Player who died
+     * @param {string} playerName - Player name
+     * @param {string} killerName - Name of killer
+     * @param {boolean} killedByPlayer - Whether killed by another player
+     */
+    recordPlayerDeath(playerId, playerName, killerName, killedByPlayer) {
+        const recentDamage = this.recentDamageEvents.get(playerId) || [];
+        const deathEvent = {
+            timestamp: Date.now(),
+            playerId,
+            playerName,
+            killerName,
+            killedByPlayer,
+            recentDamage: [...recentDamage], // Clone the array
+        };
+        this.deathEvents.push(deathEvent);
+
+        // Clear the damage events for this player after recording death
+        this.recentDamageEvents.delete(playerId);
+    }
+
+    /**
+     * Get death events for the current fight
+     */
+    getDeathEvents() {
+        return this.deathEvents;
+    }
+
+    /**
+     * Clear death events (called when starting new fight)
+     */
+    clearDeathEvents() {
+        this.deathEvents = [];
+        this.recentDamageEvents.clear();
+    }
+
+    /**
      * Helper to notify the start of a new fight.
      * Called when the first log of a new fight is written.
      */
@@ -381,12 +445,14 @@ class UserDataManager {
             ...this.enemyCache.name.keys(),
             ...this.enemyCache.hp.keys(),
             ...this.enemyCache.maxHp.keys(),
+            ...this.enemyCache.attrId.keys(),
         ]);
         enemyIds.forEach((id) => {
             result[id] = {
                 name: this.enemyCache.name.get(id),
                 hp: this.enemyCache.hp.get(id),
                 max_hp: this.enemyCache.maxHp.get(id),
+                attr_id: this.enemyCache.attrId.get(id),
             };
         });
         return result;
@@ -396,24 +462,28 @@ class UserDataManager {
         this.enemyCache.name.delete(id);
         this.enemyCache.hp.delete(id);
         this.enemyCache.maxHp.delete(id);
+        this.enemyCache.attrId.delete(id);
     }
 
     refreshEnemyCache() {
         this.enemyCache.name.clear();
         this.enemyCache.hp.clear();
         this.enemyCache.maxHp.clear();
+        this.enemyCache.attrId.clear();
     }
 
     async clearAll() {
         const usersToSave = this.users;
         const saveStartTime = this.startTime;
+        const deathEventsToSave = this.deathEvents;
 
         this.users = new Map();
         this.startTime = Date.now();
         this.lastAutoSaveTime = 0;
         this.lastLogTime = 0;
         this.encounteredBosses.clear(); // Clear boss tracking for new fight
-        await this.saveAllUserData(usersToSave, saveStartTime);
+        this.clearDeathEvents(); // Clear death tracking for new fight
+        await this.saveAllUserData(usersToSave, saveStartTime, deathEventsToSave);
 
         // Emit clear event to frontend
         socket.emit('data_cleared');
@@ -426,11 +496,12 @@ class UserDataManager {
         return Array.from(this.users.keys());
     }
 
-    async saveAllUserData(usersToSave = null, startTime = null) {
+    async saveAllUserData(usersToSave = null, startTime = null, deathEventsToSave = null) {
         try {
             const endTime = Date.now();
             const users = usersToSave || this.users;
             const timestamp = startTime || this.startTime;
+            const deathEvents = deathEventsToSave || this.deathEvents;
             const logDir = path.join('./logs', String(timestamp));
             const usersDir = path.join(logDir, 'users');
             const summary = {
@@ -495,6 +566,16 @@ class UserDataManager {
                     'utf8'
                 );
                 logger.debug(`Saved ${bossesArray.length} encountered boss(es) to ${logDir}`);
+            }
+
+            // Save death events
+            if (deathEvents && deathEvents.length > 0) {
+                await fsPromises.writeFile(
+                    path.join(logDir, 'death_events.json'),
+                    JSON.stringify(deathEvents, null, 2),
+                    'utf8'
+                );
+                logger.debug(`Saved ${deathEvents.length} death event(s) to ${logDir}`);
             }
 
             logger.debug(`Saved data for ${summary.userCount} users to ${logDir}`);

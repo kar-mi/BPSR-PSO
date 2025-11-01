@@ -18,6 +18,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     openHistoryWindow: () => ipcRenderer.send('open-history-window'),
     openSettingsWindow: () => ipcRenderer.send('open-settings-window'),
     openSkillsWindow: (data) => ipcRenderer.send('open-skills-window', data),
+    openDeathsWindow: (data) => ipcRenderer.send('open-deaths-window', data),
     refreshHistoryWindow: () => ipcRenderer.send('refresh-history-window'),
     onHistoryDataUpdated: (callback) => ipcRenderer.on('history-data-updated', callback),
 

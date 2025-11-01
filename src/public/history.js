@@ -664,6 +664,9 @@ async function viewFight(fightId) {
     // Load enemies for this fight and populate dropdown
     await loadFightEnemies(fightId);
 
+    // Load death events and update button
+    await loadDeathEvents();
+
     // Load the fight data
     await reloadFightData(fightId, 'all');
 }
@@ -897,3 +900,58 @@ document.addEventListener('keydown', (event) => {
         hideContextMenu();
     }
 });
+
+// Death Report Functionality
+const deathReportButton = document.getElementById('deathReportButton');
+const deathCountSpan = document.getElementById('deathCount');
+
+// Load death events for current fight
+async function loadDeathEvents() {
+    if (!currentFightId) return;
+
+    try {
+        const response = await fetch(`http://${SERVER_URL}/api/fight/${currentFightId}/deaths`);
+        const data = await response.json();
+
+        if (data.code === 0) {
+            const deathEvents = data.data || [];
+            deathCountSpan.textContent = deathEvents.length;
+
+            // Enable/disable button based on death count
+            if (deathEvents.length > 0) {
+                deathReportButton.disabled = false;
+            } else {
+                deathReportButton.disabled = true;
+            }
+
+            return deathEvents;
+        }
+    } catch (error) {
+        console.error('Failed to load death events:', error);
+        return [];
+    }
+}
+
+// Open death report window
+function openDeathReport() {
+    if (!currentFightId) {
+        console.error('No fight ID available');
+        return;
+    }
+
+    // Use Electron IPC to open window
+    if (window.electronAPI && window.electronAPI.openDeathsWindow) {
+        window.electronAPI.openDeathsWindow({
+            fightId: currentFightId,
+        });
+    } else {
+        // Fallback for development environment
+        const params = new URLSearchParams({
+            fightId: currentFightId,
+        });
+        window.open(`deaths.html?${params.toString()}`, '_blank', 'width=900,height=700');
+    }
+}
+
+// Event listener
+deathReportButton.addEventListener('click', openDeathReport);

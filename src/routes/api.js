@@ -7,6 +7,7 @@ import { reloadSkillConfig } from '../models/UserData.js';
 import cap from 'cap';
 import { paths } from '../config/paths.js';
 import dungeonMapping from '../tables/dungeon_mapping.json' with { type: 'json' };
+import skillNames from '../tables/skill_names.json' with { type: 'json' };
 
 /**
  * Creates and returns an Express Router instance configured with all API endpoints.
@@ -25,6 +26,9 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         /\[([^\]]+)\] \[(DMG|HEAL)\] DS: \w+ SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#\d+\((enemy|player)\).*ID: (\d+).*VAL: (\d+).*EXT: (\w+)/;
     const LOG_PARSE_SIMPLE_REGEX =
         /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\(player\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
+    // Regex to capture all damage/heal events including enemy sources
+    const LOG_PARSE_ALL_REGEX =
+        /\[([^\]]+)\] \[(DMG|HEAL)\].*SRC: ([^#]+)#(\d+)\((player|enemy)\).*TGT: ([^#]+)#(\d+)\((enemy|player)\).*VAL: (\d+)/;
 
     // Middleware to parse JSON requests
     router.use(express.json());
@@ -631,14 +635,16 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             for (const line of lines) {
                 if (!line.trim()) continue;
 
-                const match = line.match(LOG_PARSE_SIMPLE_REGEX);
-                if (match) {
-                    const type = match[2]; // DMG or HEAL
-                    const playerName = match[3];
-                    const playerUid = match[4];
-                    const targetName = match[5];
-                    const targetType = match[7];
-                    const value = parseInt(match[8]);
+                // First try to match player-sourced actions (damage dealt, healing)
+                const playerMatch = line.match(LOG_PARSE_SIMPLE_REGEX);
+                if (playerMatch) {
+                    const type = playerMatch[2]; // DMG or HEAL
+                    const playerName = playerMatch[3];
+                    const playerUid = playerMatch[4];
+                    const targetName = playerMatch[5];
+                    const targetUid = playerMatch[6];
+                    const targetType = playerMatch[7];
+                    const value = parseInt(playerMatch[8]);
 
                     // Filter by enemy if specified
                     if (enemy && enemy !== 'all') {
@@ -666,13 +672,45 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
 
                     const user = userStats[playerUid];
 
-                    // Accumulate damage/healing
+                    // Accumulate damage/healing dealt by player
                     if (type === 'DMG') {
                         user.total_damage.total += value;
                         user.total_count.total += 1;
                     } else if (type === 'HEAL') {
                         user.total_healing.total += value;
                         user.total_count.total += 1;
+                    }
+                }
+
+                // Also parse all damage events to track damage taken by players
+                const allMatch = line.match(LOG_PARSE_ALL_REGEX);
+                if (allMatch) {
+                    const type = allMatch[2]; // DMG or HEAL
+                    const sourceType = allMatch[5]; // player or enemy
+                    const targetName = allMatch[6];
+                    const targetUid = allMatch[7];
+                    const targetType = allMatch[8];
+                    const value = parseInt(allMatch[9]);
+
+                    // Only track damage taken by players
+                    if (type === 'DMG' && targetType === 'player') {
+                        // Initialize target player stats if needed
+                        if (!userStats[targetUid]) {
+                            userStats[targetUid] = {
+                                uid: targetUid,
+                                name: userMetadata[targetUid]?.name || targetName || 'Unknown',
+                                profession: userMetadata[targetUid]?.profession || 'Unknown',
+                                hp: userMetadata[targetUid]?.hp || 0,
+                                max_hp: userMetadata[targetUid]?.max_hp || 0,
+                                fightPoint: userMetadata[targetUid]?.fightPoint || 0,
+                                dead_count: userMetadata[targetUid]?.dead_count || 0,
+                                total_damage: { total: 0, critical: 0, lucky: 0, normal: 0 },
+                                total_healing: { total: 0, critical: 0, lucky: 0, normal: 0 },
+                                total_count: { total: 0, critical: 0, lucky: 0, normal: 0 },
+                                taken_damage: 0,
+                            };
+                        }
+                        userStats[targetUid].taken_damage += value;
                     }
                 }
             }
@@ -789,6 +827,50 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         }
     });
 
+    // Get death events for a specific fight
+    router.get('/fight/:fightId/deaths', async (req, res) => {
+        try {
+            const { fightId } = req.params;
+            const timestamp = fightId.replace('fight_', '');
+
+            // Security: Validate timestamp is numeric only to prevent path traversal
+            if (!TIMESTAMP_REGEX.test(timestamp)) {
+                return res.status(400).json({
+                    code: 1,
+                    msg: 'Invalid fight ID format',
+                });
+            }
+
+            const deathEventsPath = path.join('./logs', timestamp, 'death_events.json');
+
+            // Check if death events file exists
+            try {
+                await fsPromises.access(deathEventsPath);
+            } catch (error) {
+                // No death events for this fight
+                return res.json({
+                    code: 0,
+                    data: [],
+                });
+            }
+
+            // Read and parse death events
+            const deathEventsData = await fsPromises.readFile(deathEventsPath, 'utf8');
+            const deathEvents = JSON.parse(deathEventsData);
+
+            res.json({
+                code: 0,
+                data: deathEvents,
+            });
+        } catch (error) {
+            logger.error('Failed to fetch death events:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to fetch death events',
+            });
+        }
+    });
+
     // Delete a specific fight by timestamp
     router.delete('/fight/:fightId', async (req, res) => {
         try {
@@ -829,6 +911,22 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
             res.status(500).json({
                 code: 1,
                 msg: 'Failed to delete fight',
+            });
+        }
+    });
+
+    // Get skill names mapping
+    router.get('/skill-names', (req, res) => {
+        try {
+            res.json({
+                code: 0,
+                data: skillNames.skill_names,
+            });
+        } catch (error) {
+            logger.error('Failed to get skill names:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to get skill names',
             });
         }
     });

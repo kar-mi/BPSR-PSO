@@ -282,10 +282,49 @@ export class PacketProcessor {
                         targetUuid.toNumber()
                     );
                 } else {
-                    userDataManager.addTakenDamage(targetUuid.toNumber(), damage.toNumber(), isDead);
+                    const targetId = targetUuid.toNumber();
+                    userDataManager.addTakenDamage(targetId, damage.toNumber(), isDead);
+
+                    // Track damage event for death report
+                    const attackerId = attackerUuid.toNumber();
+                    let attackerName = 'Unknown';
+                    let attackerAttrId = null;
+
+                    if (isAttackerPlayer) {
+                        const attacker = userDataManager.getUser(attackerId);
+                        attackerName = attacker.name || 'Unknown';
+                    } else {
+                        attackerName = userDataManager.enemyCache.name.get(attackerId) || 'Unknown Enemy';
+                        attackerAttrId = userDataManager.enemyCache.attrId.get(attackerId);
+                    }
+
+                    userDataManager.trackDamageEventForDeathReport(targetId, {
+                        timestamp: Date.now(),
+                        attackerName,
+                        attackerAttrId,
+                        attackerId,
+                        isAttackerPlayer,
+                        skillId,
+                        damage: damage.toNumber(),
+                        damageSource,
+                        damageElement,
+                    });
                 }
                 if (isDead) {
-                    userDataManager.setAttrKV(targetUuid.toNumber(), 'hp', 0);
+                    const targetId = targetUuid.toNumber();
+                    userDataManager.setAttrKV(targetId, 'hp', 0);
+                    // Log player death
+                    const playerName = userDataManager.getUser(targetId).name || 'Unknown';
+                    const attackerId = attackerUuid.toNumber();
+                    const killerName = isAttackerPlayer
+                        ? (userDataManager.getUser(attackerId).name || 'Unknown')
+                        : (userDataManager.enemyCache.name.get(attackerId) || 'Unknown Enemy');
+                    const deathLog = `[DEATH] Player: ${playerName}#${targetId} killed by ${killerName}`;
+                    logger.info(deathLog);
+                    userDataManager.addLog(deathLog);
+
+                    // Record death event with recent damage context
+                    userDataManager.recordPlayerDeath(targetId, playerName, killerName, isAttackerPlayer);
                 }
             } else {
                 if (!isHeal && isAttackerPlayer) {
@@ -302,7 +341,16 @@ export class PacketProcessor {
                     );
                 }
                 if (isDead) {
-                    userDataManager.deleteEnemyData(targetUuid.toNumber());
+                    const targetId = targetUuid.toNumber();
+                    // Log enemy death before cleaning up cache
+                    if (userDataManager.enemyCache.name.has(targetId)) {
+                        const enemyName = userDataManager.enemyCache.name.get(targetId);
+                        const attrId = userDataManager.enemyCache.attrId.get(targetId) || 'unknown';
+                        const deathLog = `[DEATH] Enemy: ${enemyName}[${attrId}]#${targetUuid.toString()} killed by ${isAttackerPlayer ? userDataManager.getUser(attackerUuid.toNumber()).name || 'Unknown' : 'Enemy'}`;
+                        logger.info(deathLog);
+                        userDataManager.addLog(deathLog);
+                    }
+                    userDataManager.deleteEnemyData(targetId);
                 }
             }
 
@@ -330,8 +378,14 @@ export class PacketProcessor {
                 }
                 infoStr += `#${attackerUuid.toString()}(player)`;
             } else {
-                if (userDataManager.enemyCache.name.has(attackerUuid.toNumber())) {
-                    infoStr += userDataManager.enemyCache.name.get(attackerUuid.toNumber());
+                const attackerId = attackerUuid.toNumber();
+                if (userDataManager.enemyCache.name.has(attackerId)) {
+                    infoStr += userDataManager.enemyCache.name.get(attackerId);
+                }
+                // Add attrId to the log for better tracking
+                if (userDataManager.enemyCache.attrId.has(attackerId)) {
+                    const attrId = userDataManager.enemyCache.attrId.get(attackerId);
+                    infoStr += `[${attrId}]`;
                 }
                 infoStr += `#${attackerUuid.toString()}(enemy)`;
             }
@@ -344,8 +398,14 @@ export class PacketProcessor {
                 }
                 targetName += `#${targetUuid.toString()}(player)`;
             } else {
-                if (userDataManager.enemyCache.name.has(targetUuid.toNumber())) {
-                    targetName += userDataManager.enemyCache.name.get(targetUuid.toNumber());
+                const targetId = targetUuid.toNumber();
+                if (userDataManager.enemyCache.name.has(targetId)) {
+                    targetName += userDataManager.enemyCache.name.get(targetId);
+                }
+                // Add attrId to the log for better tracking
+                if (userDataManager.enemyCache.attrId.has(targetId)) {
+                    const attrId = userDataManager.enemyCache.attrId.get(targetId);
+                    targetName += `[${attrId}]`;
                 }
                 targetName += `#${targetUuid.toString()}(enemy)`;
             }
@@ -593,8 +653,9 @@ export class PacketProcessor {
                     const attrId = reader.int32();
                     const name = monsterNames[attrId];
                     if (name) {
-                        logger.info(`Found monster name ${name} for id ${enemyUid}`);
+                        logger.info(`Found monster name ${name} (attrId: ${attrId}) for entityId ${enemyUid}`);
                         userDataManager.enemyCache.name.set(enemyUid, name);
+                        userDataManager.enemyCache.attrId.set(enemyUid, attrId);
                         // Track if this enemy is a boss
                         userDataManager.trackEnemyEncounter(String(attrId), name);
                     }
@@ -614,6 +675,30 @@ export class PacketProcessor {
 
     _processSyncNearEntities(payloadBuffer) {
         const syncNearEntities = pb.SyncNearEntities.decode(payloadBuffer);
+
+        // Process disappearing entities first to clean up cache
+        if (syncNearEntities.Disappear) {
+            for (const disappearEntity of syncNearEntities.Disappear) {
+                const entityUuid = disappearEntity.Uuid;
+                if (!entityUuid) {
+                    continue;
+                }
+                const entityUid = entityUuid.shiftRight(16).toNumber();
+
+                // Clean up enemy cache when entity disappears
+                if (userDataManager.enemyCache.name.has(entityUid)) {
+                    const enemyName = userDataManager.enemyCache.name.get(entityUid);
+                    const attrId = userDataManager.enemyCache.attrId.get(entityUid);
+                    logger.info(`Entity ${enemyName}[${attrId}]#${entityUid} disappeared, cleaning up cache`);
+                    userDataManager.enemyCache.name.delete(entityUid);
+                    userDataManager.enemyCache.hp.delete(entityUid);
+                    userDataManager.enemyCache.maxHp.delete(entityUid);
+                    userDataManager.enemyCache.attrId.delete(entityUid);
+                }
+            }
+        }
+
+        // Process appearing entities
         if (!syncNearEntities.Appear) {
             return;
         }
