@@ -11,10 +11,12 @@ const preloadPath = path.join(__dirname, '../preload.js');
 const historyHtmlPath = path.join(__dirname, '../public/history.html');
 const skillsHtmlPath = path.join(__dirname, '../public/skills.html');
 const settingsHtmlPath = path.join(__dirname, '../public/settings.html');
+const deathsHtmlPath = path.join(__dirname, '../public/deaths.html');
 
 let historyWindow = null;
 let settingsWindow = null;
 let skillWindows = {}; // Store multiple skill windows by UID
+let deathWindows = {}; // Store multiple death report windows by fightId
 
 ipcMain.on('close-client', (event) => {
     app.quit();
@@ -163,6 +165,49 @@ ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId 
 
     skillWindows[uid].on('closed', () => {
         delete skillWindows[uid];
+    });
+});
+
+ipcMain.on('open-deaths-window', async (event, { fightId }) => {
+    // Check if window for this fight already exists
+    if (deathWindows[fightId] && !deathWindows[fightId].isDestroyed()) {
+        deathWindows[fightId].focus();
+        return;
+    }
+
+    const mainWindow = BrowserWindow.getAllWindows()[0];
+
+    deathWindows[fightId] = new BrowserWindow({
+        width: 900,
+        height: 700,
+        minWidth: 600,
+        minHeight: 400,
+        transparent: true,
+        frame: false,
+        title: `Death Report - ${fightId}`,
+        icon: iconPath,
+        webPreferences: {
+            preload: preloadPath,
+            contextIsolation: true,
+            nodeIntegration: false,
+        },
+        autoMenuBar: false,
+        parent: mainWindow,
+        modal: false,
+    });
+
+    deathWindows[fightId].setAlwaysOnTop(true, 'normal');
+    deathWindows[fightId].setMovable(true);
+
+    // Build URL with query parameters
+    const params = new URLSearchParams({
+        fightId: fightId,
+    });
+
+    deathWindows[fightId].loadFile(deathsHtmlPath, { query: Object.fromEntries(params) });
+
+    deathWindows[fightId].on('closed', () => {
+        delete deathWindows[fightId];
     });
 });
 
