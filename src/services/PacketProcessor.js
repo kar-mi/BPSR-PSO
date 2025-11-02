@@ -166,6 +166,37 @@ const isUuidMonster = (uuid) => {
     return (uuid.toBigInt() & 0xffffn) === 64n;
 };
 
+/**
+ * Find enemy data from cache using entity ID
+ * When direct cache lookup fails, search for enemies with matching entity IDs
+ * Assumes first instance with matching ID is the target
+ * @param {number} targetId - The target entity ID
+ * @returns {{name: string|null, attrId: number|null}} Enemy data or nulls if not found
+ */
+const findEnemyDataByEntityId = (targetId) => {
+    // First try direct lookup
+    if (userDataManager.enemyCache.name.has(targetId)) {
+        return {
+            name: userDataManager.enemyCache.name.get(targetId),
+            attrId: userDataManager.enemyCache.attrId.get(targetId) || null
+        };
+    }
+
+    // Fallback: Search for any enemy with the same entity ID
+    // Entity IDs are stored as keys in the cache, we need to find one that matches
+    // For example, if targetId is 10, we look for any cached enemy with ID 10
+    for (const [cachedId, cachedName] of userDataManager.enemyCache.name.entries()) {
+        if (cachedId === targetId) {
+            return {
+                name: cachedName,
+                attrId: userDataManager.enemyCache.attrId.get(cachedId) || null
+            };
+        }
+    }
+
+    return { name: null, attrId: null };
+};
+
 const doesStreamHaveIdentifier = (reader) => {
     const startPos = reader.position;
     if (reader.remaining() < 8) {
@@ -343,9 +374,10 @@ export class PacketProcessor {
                 if (isDead) {
                     const targetId = targetUuid.toNumber();
                     // Log enemy death before cleaning up cache
-                    if (userDataManager.enemyCache.name.has(targetId)) {
-                        const enemyName = userDataManager.enemyCache.name.get(targetId);
-                        const attrId = userDataManager.enemyCache.attrId.get(targetId) || 'unknown';
+                    const enemyData = findEnemyDataByEntityId(targetId);
+                    if (enemyData.name) {
+                        const enemyName = enemyData.name;
+                        const attrId = enemyData.attrId || 'unknown';
                         const deathLog = `[DEATH] Enemy: ${enemyName}[${attrId}]#${targetUuid.toString()} killed by ${isAttackerPlayer ? userDataManager.getUser(attackerUuid.toNumber()).name || 'Unknown' : 'Enemy'}`;
                         logger.info(deathLog);
                         userDataManager.addLog(deathLog);
@@ -379,13 +411,13 @@ export class PacketProcessor {
                 infoStr += `#${attackerUuid.toString()}(player)`;
             } else {
                 const attackerId = attackerUuid.toNumber();
-                if (userDataManager.enemyCache.name.has(attackerId)) {
-                    infoStr += userDataManager.enemyCache.name.get(attackerId);
+                const attackerData = findEnemyDataByEntityId(attackerId);
+                if (attackerData.name) {
+                    infoStr += attackerData.name;
                 }
                 // Add attrId to the log for better tracking
-                if (userDataManager.enemyCache.attrId.has(attackerId)) {
-                    const attrId = userDataManager.enemyCache.attrId.get(attackerId);
-                    infoStr += `[${attrId}]`;
+                if (attackerData.attrId) {
+                    infoStr += `[${attackerData.attrId}]`;
                 }
                 infoStr += `#${attackerUuid.toString()}(enemy)`;
             }
@@ -399,13 +431,13 @@ export class PacketProcessor {
                 targetName += `#${targetUuid.toString()}(player)`;
             } else {
                 const targetId = targetUuid.toNumber();
-                if (userDataManager.enemyCache.name.has(targetId)) {
-                    targetName += userDataManager.enemyCache.name.get(targetId);
+                const targetData = findEnemyDataByEntityId(targetId);
+                if (targetData.name) {
+                    targetName += targetData.name;
                 }
                 // Add attrId to the log for better tracking
-                if (userDataManager.enemyCache.attrId.has(targetId)) {
-                    const attrId = userDataManager.enemyCache.attrId.get(targetId);
-                    targetName += `[${attrId}]`;
+                if (targetData.attrId) {
+                    targetName += `[${targetData.attrId}]`;
                 }
                 targetName += `#${targetUuid.toString()}(enemy)`;
             }

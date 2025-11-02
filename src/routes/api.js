@@ -1195,5 +1195,82 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
         }
     });
 
+    // Reload enemy cache from fight logs
+    router.post('/enemy-cache/reload', async (req, res) => {
+        try {
+            const { timestamp } = req.body;
+
+            // If no timestamp provided, use current fight
+            let logPath;
+            if (timestamp) {
+                // Security: Validate timestamp is numeric only to prevent path traversal
+                if (!TIMESTAMP_REGEX.test(timestamp)) {
+                    return res.status(400).json({
+                        code: 1,
+                        msg: 'Invalid timestamp format',
+                    });
+                }
+                logPath = path.join('./logs', timestamp, 'fight.log');
+            } else {
+                // Use current fight
+                logPath = path.join('./logs', String(userDataManager.startTime), 'fight.log');
+            }
+
+            // Read the fight log
+            let logContent;
+            try {
+                logContent = await fsPromises.readFile(logPath, 'utf8');
+            } catch (error) {
+                logger.warn('Fight log not found for cache reload:', error);
+                return res.status(404).json({
+                    code: 1,
+                    msg: 'Fight log not found',
+                });
+            }
+
+            // Parse log to extract enemy information
+            // Format: TGT: EnemyName[attrId]#entityId(enemy)
+            const enemyRegex = /TGT: ([^[#]+)\[(\d+)\]#(\d+)\(enemy\)/g;
+            const lines = logContent.split('\n');
+            const enemyData = new Map(); // entityId -> {name, attrId}
+            let reloadCount = 0;
+
+            for (const line of lines) {
+                let match;
+                while ((match = enemyRegex.exec(line)) !== null) {
+                    const [, name, attrId, entityId] = match;
+                    const entityIdNum = parseInt(entityId);
+                    const attrIdNum = parseInt(attrId);
+
+                    // Only add if not already in cache
+                    if (!userDataManager.enemyCache.name.has(entityIdNum)) {
+                        userDataManager.enemyCache.name.set(entityIdNum, name);
+                        userDataManager.enemyCache.attrId.set(entityIdNum, attrIdNum);
+                        reloadCount++;
+                        logger.debug(`Reloaded enemy cache: ${name}[${attrId}]#${entityId}`);
+                    }
+                }
+            }
+
+            logger.info(`Reloaded ${reloadCount} enemy entries into cache from logs`);
+
+            res.json({
+                code: 0,
+                msg: `Successfully reloaded ${reloadCount} enemy entries into cache`,
+                data: {
+                    reloadedCount: reloadCount,
+                    totalCached: userDataManager.enemyCache.name.size,
+                },
+            });
+        } catch (error) {
+            logger.error('Failed to reload enemy cache:', error);
+            res.status(500).json({
+                code: 1,
+                msg: 'Failed to reload enemy cache',
+                error: error.message,
+            });
+        }
+    });
+
     return router;
 }
