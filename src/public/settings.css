@@ -231,6 +231,116 @@
     }
 }
 
+/* Debug Tab Styles */
+.debug-action {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+.debug-action > div {
+    flex: 1;
+}
+
+.timestamp-input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 15px;
+}
+
+.timestamp-input-group label {
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.timestamp-input {
+    width: 100%;
+    max-width: 300px;
+    padding: 8px 12px;
+    background: rgba(40, 40, 40, 0.9);
+    color: #ffffff;
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    font-family: 'Courier New', monospace;
+    font-size: 13px;
+    transition: all 0.2s ease;
+}
+
+.timestamp-input:focus {
+    outline: none;
+    border-color: #4a9eff;
+    background: rgba(50, 50, 50, 0.9);
+}
+
+.timestamp-input::placeholder {
+    color: rgba(255, 255, 255, 0.4);
+    font-style: italic;
+}
+
+.action-button {
+    padding: 10px 20px;
+    background: rgba(74, 158, 255, 0.2);
+    color: #4a9eff;
+    border: 1px solid #4a9eff;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: 'Roboto Condensed', sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.action-button:hover:not(:disabled) {
+    background: rgba(74, 158, 255, 0.3);
+    border-color: #6ab5ff;
+}
+
+.action-button:active:not(:disabled) {
+    background: rgba(74, 158, 255, 0.4);
+}
+
+.action-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.status-message {
+    margin-top: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.3s ease;
+}
+
+.status-message.info {
+    background: rgba(74, 158, 255, 0.1);
+    border: 1px solid rgba(74, 158, 255, 0.3);
+    color: #4a9eff;
+}
+
+.status-message.success {
+    background: rgba(76, 175, 80, 0.1);
+    border: 1px solid rgba(76, 175, 80, 0.3);
+    color: #4caf50;
+}
+
+.status-message.error {
+    background: rgba(244, 67, 54, 0.1);
+    border: 1px solid rgba(244, 67, 54, 0.3);
+    color: #f44336;
+}
+
+.status-message:empty {
+    display: none;
+}
+
 /* Scrollbar Styles */
 .settings-content::-webkit-scrollbar {
     width: 8px;

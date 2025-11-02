@@ -38,6 +38,7 @@
                     <button class="tab-button active" data-tab="general">General</button>
                     <button class="tab-button" data-tab="network">Network</button>
                     <button class="tab-button" data-tab="keybinds">Keybinds</button>
+                    <button class="tab-button" data-tab="debug">Debug</button>
                 </div>
                 <div class="settings-content">
                     <!-- General Settings Tab -->
@@ -87,6 +88,38 @@
                             </div>
                             <div id="keybindList" class="keybind-list">
                                 <!-- Keybinds will be populated by JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Debug Settings Tab -->
+                    <div id="debug-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h3>Debug Tools</h3>
+                            <div class="settings-option-description">
+                                Tools for troubleshooting and debugging the application.
+                            </div>
+
+                            <div class="settings-option">
+                                <div class="debug-action">
+                                    <div>
+                                        <label>Enemy Cache Reload</label>
+                                        <div class="settings-option-description">
+                                            Reload enemy name and attrId data from fight logs into the cache. Use this if enemies are showing as just "#ID(enemy)" without names.
+                                        </div>
+                                        <div class="timestamp-input-group">
+                                            <label for="fightTimestamp">Fight Timestamp (optional):</label>
+                                            <input
+                                                type="text"
+                                                id="fightTimestamp"
+                                                placeholder="Leave empty for current fight"
+                                                class="timestamp-input"
+                                            />
+                                        </div>
+                                    </div>
+                                    <button id="reloadCacheButton" class="action-button">Reload Cache</button>
+                                </div>
+                                <div id="cacheReloadStatus" class="status-message"></div>
                             </div>
                         </div>
                     </div>

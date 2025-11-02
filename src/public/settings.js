@@ -5,6 +5,7 @@ let networkAdapterSelect, refreshAdaptersButton;
 let timeoutSlider, timeoutValue;
 let keybindList;
 let closeButton;
+let reloadCacheButton, cacheReloadStatus, fightTimestampInput;
 
 // Keybind management
 let currentKeybinds = {};
@@ -332,6 +333,68 @@ async function updateKeybind(keybindName, newShortcut) {
 
 
 /**
+ * Debug Functions
+ */
+async function reloadEnemyCache() {
+    try {
+        reloadCacheButton.disabled = true;
+        cacheReloadStatus.textContent = 'Reloading cache...';
+        cacheReloadStatus.className = 'status-message info';
+
+        // Get timestamp from input field, trim whitespace
+        const timestamp = fightTimestampInput.value.trim();
+
+        // Build request body
+        const requestBody = {};
+        if (timestamp) {
+            // Validate timestamp is numeric
+            if (!/^\d+$/.test(timestamp)) {
+                cacheReloadStatus.textContent = '✗ Invalid timestamp format. Must be numeric.';
+                cacheReloadStatus.className = 'status-message error';
+                reloadCacheButton.disabled = false;
+                setTimeout(() => {
+                    cacheReloadStatus.textContent = '';
+                    cacheReloadStatus.className = 'status-message';
+                }, 5000);
+                return;
+            }
+            requestBody.timestamp = timestamp;
+        }
+
+        const response = await fetch(`http://${SERVER_URL}/api/enemy-cache/reload`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        const result = await response.json();
+
+        if (result.code === 0) {
+            cacheReloadStatus.textContent = `✓ ${result.msg}`;
+            cacheReloadStatus.className = 'status-message success';
+            console.log('Cache reload result:', result.data);
+        } else {
+            cacheReloadStatus.textContent = `✗ ${result.msg}`;
+            cacheReloadStatus.className = 'status-message error';
+        }
+    } catch (error) {
+        console.error('Error reloading cache:', error);
+        cacheReloadStatus.textContent = `✗ Error: ${error.message}`;
+        cacheReloadStatus.className = 'status-message error';
+    } finally {
+        reloadCacheButton.disabled = false;
+
+        // Clear status message after 5 seconds
+        setTimeout(() => {
+            cacheReloadStatus.textContent = '';
+            cacheReloadStatus.className = 'status-message';
+        }, 5000);
+    }
+}
+
+/**
  * Initialize DOM elements and event listeners
  */
 function initializeDOMElements() {
@@ -341,6 +404,9 @@ function initializeDOMElements() {
     timeoutValue = document.getElementById('timeoutValue');
     keybindList = document.getElementById('keybindList');
     closeButton = document.getElementById('closeButton');
+    reloadCacheButton = document.getElementById('reloadCacheButton');
+    cacheReloadStatus = document.getElementById('cacheReloadStatus');
+    fightTimestampInput = document.getElementById('fightTimestamp');
 }
 
 /**
@@ -376,6 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshAdaptersButton.addEventListener('click', () => {
         loadNetworkAdapters();
     });
+
+    // Debug tab events
+    reloadCacheButton.addEventListener('click', reloadEnemyCache);
 
     // Close button
     closeButton.addEventListener('click', closeSettings);
