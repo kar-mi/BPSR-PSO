@@ -168,33 +168,19 @@ const isUuidMonster = (uuid) => {
 
 /**
  * Find enemy data from cache using entity ID
- * When direct cache lookup fails, search for enemies with matching entity IDs
- * Assumes first instance with matching ID is the target
  * @param {number} targetId - The target entity ID
  * @returns {{name: string|null, attrId: number|null}} Enemy data or nulls if not found
  */
 const findEnemyDataByEntityId = (targetId) => {
-    // First try direct lookup
-    if (userDataManager.enemyCache.name.has(targetId)) {
-        return {
-            name: userDataManager.enemyCache.name.get(targetId),
-            attrId: userDataManager.enemyCache.attrId.get(targetId) || null
-        };
-    }
+    // Check if we have name or attrId for this entity
+    const name = userDataManager.enemyCache.name.get(targetId) || null;
+    const attrId = userDataManager.enemyCache.attrId.get(targetId);
 
-    // Fallback: Search for any enemy with the same entity ID
-    // Entity IDs are stored as keys in the cache, we need to find one that matches
-    // For example, if targetId is 10, we look for any cached enemy with ID 10
-    for (const [cachedId, cachedName] of userDataManager.enemyCache.name.entries()) {
-        if (cachedId === targetId) {
-            return {
-                name: cachedName,
-                attrId: userDataManager.enemyCache.attrId.get(cachedId) || null
-            };
-        }
-    }
-
-    return { name: null, attrId: null };
+    // Return attrId as null if undefined, otherwise return the value (including 0)
+    return {
+        name: name,
+        attrId: attrId !== undefined ? attrId : null
+    };
 };
 
 const doesStreamHaveIdentifier = (reader) => {
@@ -325,8 +311,9 @@ export class PacketProcessor {
                         const attacker = userDataManager.getUser(attackerId);
                         attackerName = attacker.name || 'Unknown';
                     } else {
-                        attackerName = userDataManager.enemyCache.name.get(attackerId) || 'Unknown Enemy';
-                        attackerAttrId = userDataManager.enemyCache.attrId.get(attackerId);
+                        const attackerData = findEnemyDataByEntityId(attackerId);
+                        attackerName = attackerData.name || 'Unknown Enemy';
+                        attackerAttrId = attackerData.attrId;
                     }
 
                     userDataManager.trackDamageEventForDeathReport(targetId, {
@@ -347,9 +334,17 @@ export class PacketProcessor {
                     // Log player death
                     const playerName = userDataManager.getUser(targetId).name || 'Unknown';
                     const attackerId = attackerUuid.toNumber();
-                    const killerName = isAttackerPlayer
-                        ? (userDataManager.getUser(attackerId).name || 'Unknown')
-                        : (userDataManager.enemyCache.name.get(attackerId) || 'Unknown Enemy');
+                    let killerName;
+                    if (isAttackerPlayer) {
+                        killerName = userDataManager.getUser(attackerId).name || 'Unknown';
+                    } else {
+                        const killerData = findEnemyDataByEntityId(attackerId);
+                        killerName = killerData.name || 'Unknown Enemy';
+                        // Include attrId if available
+                        if (killerData.attrId !== null && killerData.attrId !== undefined) {
+                            killerName = `${killerName}[${killerData.attrId}]`;
+                        }
+                    }
                     const deathLog = `[DEATH] Player: ${playerName}#${targetId} killed by ${killerName}`;
                     logger.info(deathLog);
                     userDataManager.addLog(deathLog);
@@ -416,7 +411,7 @@ export class PacketProcessor {
                     infoStr += attackerData.name;
                 }
                 // Add attrId to the log for better tracking
-                if (attackerData.attrId) {
+                if (attackerData.attrId !== null && attackerData.attrId !== undefined) {
                     infoStr += `[${attackerData.attrId}]`;
                 }
                 infoStr += `#${attackerUuid.toString()}(enemy)`;
@@ -436,7 +431,7 @@ export class PacketProcessor {
                     targetName += targetData.name;
                 }
                 // Add attrId to the log for better tracking
-                if (targetData.attrId) {
+                if (targetData.attrId !== null && targetData.attrId !== undefined) {
                     targetName += `[${targetData.attrId}]`;
                 }
                 targetName += `#${targetUuid.toString()}(enemy)`;
@@ -683,13 +678,17 @@ export class PacketProcessor {
                 }
                 case AttrType.AttrId: {
                     const attrId = reader.int32();
+                    // Always cache attrId, even if name lookup fails
+                    userDataManager.enemyCache.attrId.set(enemyUid, attrId);
+
                     const name = monsterNames[attrId];
                     if (name) {
                         logger.info(`Found monster name ${name} (attrId: ${attrId}) for entityId ${enemyUid}`);
                         userDataManager.enemyCache.name.set(enemyUid, name);
-                        userDataManager.enemyCache.attrId.set(enemyUid, attrId);
                         // Track if this enemy is a boss
                         userDataManager.trackEnemyEncounter(String(attrId), name);
+                    } else {
+                        logger.warn(`Monster attrId ${attrId} for entityId ${enemyUid} not found in monster_names table`);
                     }
                     break;
                 }
