@@ -19,9 +19,10 @@ body {
     left: 50%;
     transform: translateX(-50%);
     width: 600px;
-    padding: 8px;
+    padding: 4px;
     z-index: 9999;
-    pointer-events: none;
+    cursor: move;
+    -webkit-app-region: drag;
 }
 
 .boss-hp-overlay.hidden {
@@ -31,35 +32,39 @@ body {
 .boss-hp-container {
     background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(30, 30, 30, 0.95));
     border: 2px solid rgba(255, 255, 255, 0.1);
-    border-radius: 8px;
-    padding: 10px 16px;
+    border-radius: 6px;
+    padding: 6px 12px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
     backdrop-filter: blur(10px);
-}
-
-.boss-name {
-    color: #ffd700;
-    font-size: 16px;
-    font-weight: 700;
-    text-align: center;
-    margin-bottom: 6px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-}
-
-.boss-hp-bar-wrapper {
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
+.boss-name {
+    color: #ffd700;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+.boss-hp-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
 .boss-hp-bar {
     flex: 1;
-    height: 20px;
+    height: 14px;
     background: rgba(40, 40, 40, 0.9);
     border: 1px solid rgba(255, 255, 255, 0.2);
-    border-radius: 10px;
+    border-radius: 7px;
     overflow: hidden;
     position: relative;
     box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -107,11 +112,11 @@ body {
 
 .boss-hp-text {
     color: #ffffff;
-    font-size: 14px;
+    font-size: 11px;
     font-weight: 700;
     white-space: nowrap;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
-    min-width: 140px;
+    min-width: 120px;
     text-align: right;
 }
 
