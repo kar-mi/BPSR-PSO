@@ -21,7 +21,7 @@ async function initialize() {
         app.setAppUserModelId(app.name);
     }
 
-    window.create();
+    const mainWindow = window.create();
     registerShortcuts();
 
     try {
@@ -31,9 +31,9 @@ async function initialize() {
         console.log(`[Main Process] Server started. Loading URL: ${serverUrl}`);
         window.loadURL(serverUrl);
 
-        // Create boss HP bar window
+        // Create boss HP bar window as child of main window
         console.log('[Main Process] Creating boss HP bar window...');
-        bossHpWindow.create(serverUrl);
+        bossHpWindow.create(serverUrl, mainWindow);
     } catch (error) {
         console.error('[Main Process] CRITICAL: Failed to start server:', error);
         app.quit();

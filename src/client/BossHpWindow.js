@@ -69,9 +69,10 @@ class BossHpWindow {
     /**
      * Creates and displays the boss HP bar overlay window
      * @param {string} serverUrl - The server URL to pass to the window
+     * @param {BrowserWindow} mainWindow - The main window to set as parent
      * @returns {BrowserWindow} The created BrowserWindow instance
      */
-    create(serverUrl) {
+    create(serverUrl, mainWindow = null) {
         // Get primary display dimensions to center the window at the top if no saved position
         const { width: screenWidth } = screen.getPrimaryDisplay().workAreaSize;
 
@@ -105,6 +106,8 @@ class BossHpWindow {
             maximizable: false,
             closable: false,
             focusable: false,
+            parent: mainWindow,
+            modal: false,
         });
 
         // Don't ignore mouse events so window can be dragged
