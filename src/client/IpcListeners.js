@@ -2,8 +2,8 @@ import { app, ipcMain, BrowserWindow } from 'electron';
 import { keybindManager } from './shortcuts.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs from 'fs';
 import { paths } from '../config/paths.js';
+import { loadWindowConfig, saveWindowConfig } from '../utils/windowConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,41 +19,6 @@ let historyWindow = null;
 let settingsWindow = null;
 let skillWindows = {}; // Store multiple skill windows by UID
 let deathWindows = {}; // Store multiple death report windows by fightId
-
-/**
- * Helper function to load window config
- */
-function loadWindowConfig(configPath, defaultConfig) {
-    try {
-        if (fs.existsSync(configPath)) {
-            const rawData = fs.readFileSync(configPath, 'utf8');
-            const loadedConfig = JSON.parse(rawData);
-            return { ...defaultConfig, ...loadedConfig };
-        }
-    } catch (error) {
-        console.error(`Failed to read window config from ${configPath}, using defaults.`, error);
-    }
-    return defaultConfig;
-}
-
-/**
- * Helper function to save window config
- */
-function saveWindowConfig(window, configPath) {
-    if (!window || window.isDestroyed()) return;
-    try {
-        const bounds = window.getBounds();
-        const configData = {
-            width: bounds.width,
-            height: bounds.height,
-            x: bounds.x,
-            y: bounds.y,
-        };
-        fs.writeFileSync(configPath, JSON.stringify(configData, null, 4));
-    } catch (error) {
-        console.error(`Failed to save window config to ${configPath}.`, error);
-    }
-}
 
 ipcMain.on('close-client', (event) => {
     app.quit();

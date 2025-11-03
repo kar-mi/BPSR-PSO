@@ -1,8 +1,8 @@
 import { BrowserWindow, screen } from 'electron';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs from 'fs';
 import { paths } from '../config/paths.js';
+import { loadWindowConfig, saveWindowConfig } from '../utils/windowConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -34,16 +34,7 @@ class BossHpWindow {
      * @private
      */
     _loadConfig() {
-        try {
-            if (fs.existsSync(configPath)) {
-                const rawData = fs.readFileSync(configPath, 'utf8');
-                const loadedConfig = JSON.parse(rawData);
-                return { ...this.defaultConfig, ...loadedConfig };
-            }
-        } catch (error) {
-            console.error('Failed to read boss HP window config, using defaults.', error);
-        }
-        return this.defaultConfig;
+        return loadWindowConfig(configPath, this.defaultConfig);
     }
 
     /**
@@ -51,19 +42,7 @@ class BossHpWindow {
      * @private
      */
     _saveConfig() {
-        if (!this._window) return;
-        try {
-            const bounds = this._window.getBounds();
-            const configData = {
-                width: bounds.width,
-                height: bounds.height,
-                x: bounds.x,
-                y: bounds.y,
-            };
-            fs.writeFileSync(configPath, JSON.stringify(configData, null, 4));
-        } catch (error) {
-            console.error('Failed to save boss HP window config.', error);
-        }
+        saveWindowConfig(this._window, configPath);
     }
 
     /**
