@@ -1,6 +1,6 @@
 # BPSR-PSO
 # Disclaimer
-## Most of the enhacments are from chase-simmons version. It is mostly built using AI.
+## Most of the enhacments are added to the chase-simmons version. It is mostly built using AI.
 
 **Forked from:** https://github.com/dmlgzs/StarResonanceDamageCounter / https://github.com/Chase-Simmons/BPSR-PSO
 
