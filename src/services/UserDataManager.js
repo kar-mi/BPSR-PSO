@@ -32,6 +32,10 @@ class UserDataManager {
             attrId: new Map(), // Track attrId for each entity
         };
 
+        // Persistent enemy tracking - survives cache clears
+        // Maps entityId -> { name, attrId, maxHp } for important enemies
+        this.persistentEnemyData = new Map();
+
         // Track encountered bosses during the fight
         this.encounteredBosses = new Set();
 
@@ -458,7 +462,29 @@ class UserDataManager {
         return result;
     }
 
+    /**
+     * Persist important enemy data before deleting from cache
+     * @param {number} id - Enemy entity ID
+     */
+    persistEnemyDataIfImportant(id) {
+        const name = this.enemyCache.name.get(id);
+        const attrId = this.enemyCache.attrId.get(id);
+        const maxHp = this.enemyCache.maxHp.get(id);
+
+        // Only persist if we have name/attrId and significant HP
+        if ((name || attrId) && maxHp && maxHp > 10000) {
+            this.persistentEnemyData.set(id, {
+                name: name || null,
+                attrId: attrId !== undefined ? attrId : null,
+                maxHp: maxHp
+            });
+        }
+    }
+
     deleteEnemyData(id) {
+        // Persist before deleting if it's an important enemy
+        this.persistEnemyDataIfImportant(id);
+
         this.enemyCache.name.delete(id);
         this.enemyCache.hp.delete(id);
         this.enemyCache.maxHp.delete(id);
@@ -466,6 +492,12 @@ class UserDataManager {
     }
 
     refreshEnemyCache() {
+        // Persist all current enemies before clearing cache
+        for (const id of this.enemyCache.name.keys()) {
+            this.persistEnemyDataIfImportant(id);
+        }
+
+        // Find and track the max HP monster
         let maxHpMonsterId = 0;
         for (const [id, hp] of this.enemyCache.maxHp.entries()) {
             if (!maxHpMonsterId || hp > this.enemyCache.maxHp.get(maxHpMonsterId)) {
@@ -493,6 +525,7 @@ class UserDataManager {
         this.lastLogTime = 0;
         this.encounteredBosses.clear(); // Clear boss tracking for new fight
         this.clearDeathEvents(); // Clear death tracking for new fight
+        this.persistentEnemyData.clear(); // Clear persistent enemy data for new fight
         await this.saveAllUserData(usersToSave, saveStartTime, deathEventsToSave);
 
         // Emit clear event to frontend

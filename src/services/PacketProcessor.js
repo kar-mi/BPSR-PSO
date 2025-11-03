@@ -168,18 +168,35 @@ const isUuidMonster = (uuid) => {
 
 /**
  * Find enemy data from cache using entity ID
+ * Uses multi-tier lookup: active cache -> persistent data -> null
  * @param {number} targetId - The target entity ID
  * @returns {{name: string|null, attrId: number|null}} Enemy data or nulls if not found
  */
 const findEnemyDataByEntityId = (targetId) => {
-    // Check if we have name or attrId for this entity
-    const name = userDataManager.enemyCache.name.get(targetId) || null;
-    const attrId = userDataManager.enemyCache.attrId.get(targetId);
+    // Tier 1: Check active cache (most recent data)
+    const cachedName = userDataManager.enemyCache.name.get(targetId);
+    const cachedAttrId = userDataManager.enemyCache.attrId.get(targetId);
 
-    // Return attrId as null if undefined, otherwise return the value (including 0)
+    if (cachedName || cachedAttrId !== undefined) {
+        return {
+            name: cachedName || null,
+            attrId: cachedAttrId !== undefined ? cachedAttrId : null
+        };
+    }
+
+    // Tier 2: Check persistent data (survives cache clears)
+    const persistentData = userDataManager.persistentEnemyData.get(targetId);
+    if (persistentData) {
+        return {
+            name: persistentData.name,
+            attrId: persistentData.attrId
+        };
+    }
+
+    // Tier 3: Not found anywhere
     return {
-        name: name,
-        attrId: attrId !== undefined ? attrId : null
+        name: null,
+        attrId: null
     };
 };
 
@@ -706,7 +723,10 @@ export class PacketProcessor {
                     break;
                 }
                 case AttrType.AttrMaxHp: {
-                    userDataManager.enemyCache.maxHp.set(enemyUid, reader.int32());
+                    const maxHp = reader.int32();
+                    userDataManager.enemyCache.maxHp.set(enemyUid, maxHp);
+                    // Proactively persist if this is a high-HP enemy
+                    userDataManager.persistEnemyDataIfImportant(enemyUid);
                     break;
                 }
             }
