@@ -251,6 +251,14 @@ export class PacketProcessor {
             }
         }
 
+        const BuffEffectSync = aoiSyncDelta.BuffEffect;
+        if (isTargetMonster && BuffEffectSync && BuffEffectSync.BuffEffects) {
+            const BuffEffects = BuffEffectSync.BuffEffects;
+            for (const BuffEffect of BuffEffects) {
+            }
+        }
+
+
         const skillEffect = aoiSyncDelta.SkillEffects;
         if (!skillEffect || !skillEffect.Damages) {
             return;
@@ -331,6 +339,7 @@ export class PacketProcessor {
                 if (isDead) {
                     const targetId = targetUuid.toNumber();
                     userDataManager.setAttrKV(targetId, 'hp', 0);
+                    userDataManager.enemyCache.hp.set(targetUuid.toNumber(), 0);
                     // Log player death
                     const playerName = userDataManager.getUser(targetId).name || 'Unknown';
                     const attackerId = attackerUuid.toNumber();
@@ -346,7 +355,7 @@ export class PacketProcessor {
                         }
                     }
                     const deathLog = `[DEATH] Player: ${playerName}#${targetId} killed by ${killerName}`;
-                    logger.info(deathLog);
+                    //logger.info(deathLog);
                     userDataManager.addLog(deathLog);
 
                     // Record death event with recent damage context
@@ -715,6 +724,10 @@ export class PacketProcessor {
                     continue;
                 }
                 const entityUid = entityUuid.shiftRight(16).toNumber();
+
+                if (entity.Type == pb.EDisappearType.EDisappearDead) {
+                    userDataManager.enemyCache.hp.set(entityUid, 0);
+                }
 
                 // Clean up enemy cache when entity disappears
                 if (userDataManager.enemyCache.name.has(entityUid)) {

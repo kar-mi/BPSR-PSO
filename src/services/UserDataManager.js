@@ -466,6 +466,16 @@ class UserDataManager {
     }
 
     refreshEnemyCache() {
+        let maxHpMonsterId = 0;
+        for (const [id, hp] of this.enemyCache.maxHp.entries()) {
+            if (!maxHpMonsterId || hp > this.enemyCache.maxHp.get(maxHpMonsterId)) {
+                maxHpMonsterId = id;
+            }
+        }
+        if (maxHpMonsterId && this.enemyCache.name.has(maxHpMonsterId)) {
+            this.maxHpMonster = this.enemyCache.name.get(maxHpMonsterId);
+        }
+
         this.enemyCache.name.clear();
         this.enemyCache.hp.clear();
         this.enemyCache.maxHp.clear();
@@ -510,7 +520,22 @@ class UserDataManager {
                 duration: endTime - timestamp,
                 userCount: users.size,
                 version: config.VERSION,
+                maxHpMonster: '',
             };
+
+            let maxHpMonsterId = 0;
+            for (const [id, hp] of this.enemyCache.maxHp.entries()) {
+                if (!maxHpMonsterId || hp > this.enemyCache.maxHp.get(maxHpMonsterId)) {
+                    maxHpMonsterId = id;
+                }
+            }
+            if (maxHpMonsterId && this.enemyCache.name.has(maxHpMonsterId)) {
+                summary.maxHpMonster = this.enemyCache.name.get(maxHpMonsterId);
+            }
+            if (!summary.maxHpMonster) {
+                summary.maxHpMonster = this.maxHpMonster;
+                this.maxHpMonster = '';
+            }
 
             const allUsersData = {};
             const userDatas = new Map();
