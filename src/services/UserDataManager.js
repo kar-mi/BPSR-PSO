@@ -408,7 +408,11 @@ class UserDataManager {
         } else {
             // Update existing active boss HP
             this.activeBoss.hp = hp || 0;
-            if (maxHp) this.activeBoss.maxHp = maxHp;
+            // Always update maxHp if it changes (for different instance sizes)
+            // MaxHp never changes mid-combat, but can differ between instances
+            if (maxHp && maxHp !== this.activeBoss.maxHp) {
+                this.activeBoss.maxHp = maxHp;
+            }
             if (name) this.activeBoss.name = name;
         }
 
