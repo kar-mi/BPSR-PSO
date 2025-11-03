@@ -32,8 +32,15 @@ class UserDataManager {
             attrId: new Map(), // Track attrId for each entity
         };
 
+        // Persistent enemy tracking - survives cache clears
+        // Maps entityId -> { name, attrId, maxHp } for important enemies
+        this.persistentEnemyData = new Map();
+
         // Track encountered bosses during the fight
         this.encounteredBosses = new Set();
+
+        // Active boss tracking for HP bar
+        this.activeBoss = null; // { entityId, name, hp, maxHp, attrId }
 
         // Track recent damage events for death reports (playerId -> array of recent damage events)
         this.recentDamageEvents = new Map();
@@ -331,16 +338,110 @@ class UserDataManager {
      * @param {string} enemyName - The enemy name
      */
     trackEnemyEncounter(enemyId, enemyName) {
-        // Check if this enemy ID is a boss
+        let isBoss = false;
+        let bossName = null;
+
+        // Method 1: Check by ID (attrId)
         if (bossData[enemyId]) {
-            const bossName = bossData[enemyId];
+            isBoss = true;
+            bossName = bossData[enemyId];
+        }
+
+        // Method 2: Check by name (fallback if ID not in table)
+        if (!isBoss && enemyName) {
+            // Check if enemy name matches any boss name in the table
+            for (const [id, name] of Object.entries(bossData)) {
+                if (name === enemyName || enemyName.includes(name) || name.includes(enemyName)) {
+                    isBoss = true;
+                    bossName = name;
+                    enemyId = id; // Update ID if found by name
+                    break;
+                }
+            }
+        }
+
+        if (isBoss && bossName) {
             this.encounteredBosses.add(JSON.stringify({
                 id: enemyId,
                 name: bossName,
                 displayName: enemyName || bossName
             }));
-            logger.debug(`Boss encountered: ${bossName} (ID: ${enemyId})`);
+            logger.debug(`Boss encountered: ${bossName} (ID: ${enemyId}, Display: ${enemyName || bossName})`);
         }
+    }
+
+    /**
+     * Update active boss HP (for boss HP bar overlay)
+     * @param {number} entityId - Enemy entity ID
+     */
+    updateActiveBossHp(entityId) {
+        const name = this.enemyCache.name.get(entityId);
+        const attrId = this.enemyCache.attrId.get(entityId);
+        const hp = this.enemyCache.hp.get(entityId);
+        const maxHp = this.enemyCache.maxHp.get(entityId);
+
+        // Check if this is a boss
+        let isBoss = false;
+        if (attrId && bossData[attrId]) {
+            isBoss = true;
+        } else if (name) {
+            // Check by name
+            for (const [id, bossName] of Object.entries(bossData)) {
+                if (name === bossName || name.includes(bossName) || bossName.includes(name)) {
+                    isBoss = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isBoss) return null;
+
+        // If no active boss or different boss, set as active
+        if (!this.activeBoss || this.activeBoss.entityId !== entityId) {
+            this.activeBoss = {
+                entityId,
+                name: name || 'Unknown Boss',
+                hp: hp || 0,
+                maxHp: maxHp || 0,
+                attrId: attrId || null
+            };
+        } else {
+            // Update existing active boss HP
+            this.activeBoss.hp = hp || 0;
+            // Always update maxHp if it changes (for different instance sizes)
+            // MaxHp never changes mid-combat, but can differ between instances
+            if (maxHp && maxHp !== this.activeBoss.maxHp) {
+                this.activeBoss.maxHp = maxHp;
+            }
+            if (name) this.activeBoss.name = name;
+        }
+
+        // Emit boss HP update via WebSocket
+        socket.emit('boss_hp_update', {
+            name: this.activeBoss.name,
+            hp: this.activeBoss.hp,
+            maxHp: this.activeBoss.maxHp
+        });
+
+        return this.activeBoss;
+    }
+
+    /**
+     * Get active boss data
+     */
+    getActiveBoss() {
+        // Clear active boss if dead
+        if (this.activeBoss && this.activeBoss.hp <= 0) {
+            this.activeBoss = null;
+        }
+        return this.activeBoss;
+    }
+
+    /**
+     * Clear active boss
+     */
+    clearActiveBoss() {
+        this.activeBoss = null;
     }
 
     setProfession(uid, profession) {
@@ -458,7 +559,29 @@ class UserDataManager {
         return result;
     }
 
+    /**
+     * Persist important enemy data before deleting from cache
+     * @param {number} id - Enemy entity ID
+     */
+    persistEnemyDataIfImportant(id) {
+        const name = this.enemyCache.name.get(id);
+        const attrId = this.enemyCache.attrId.get(id);
+        const maxHp = this.enemyCache.maxHp.get(id);
+
+        // Only persist if we have name/attrId and significant HP
+        if ((name || attrId) && maxHp && maxHp > 10000) {
+            this.persistentEnemyData.set(id, {
+                name: name || null,
+                attrId: attrId !== undefined ? attrId : null,
+                maxHp: maxHp
+            });
+        }
+    }
+
     deleteEnemyData(id) {
+        // Persist before deleting if it's an important enemy
+        this.persistEnemyDataIfImportant(id);
+
         this.enemyCache.name.delete(id);
         this.enemyCache.hp.delete(id);
         this.enemyCache.maxHp.delete(id);
@@ -466,6 +589,22 @@ class UserDataManager {
     }
 
     refreshEnemyCache() {
+        // Persist all current enemies before clearing cache
+        for (const id of this.enemyCache.name.keys()) {
+            this.persistEnemyDataIfImportant(id);
+        }
+
+        // Find and track the max HP monster
+        let maxHpMonsterId = 0;
+        for (const [id, hp] of this.enemyCache.maxHp.entries()) {
+            if (!maxHpMonsterId || hp > this.enemyCache.maxHp.get(maxHpMonsterId)) {
+                maxHpMonsterId = id;
+            }
+        }
+        if (maxHpMonsterId && this.enemyCache.name.has(maxHpMonsterId)) {
+            this.maxHpMonster = this.enemyCache.name.get(maxHpMonsterId);
+        }
+
         this.enemyCache.name.clear();
         this.enemyCache.hp.clear();
         this.enemyCache.maxHp.clear();
@@ -483,10 +622,13 @@ class UserDataManager {
         this.lastLogTime = 0;
         this.encounteredBosses.clear(); // Clear boss tracking for new fight
         this.clearDeathEvents(); // Clear death tracking for new fight
+        this.persistentEnemyData.clear(); // Clear persistent enemy data for new fight
+        this.clearActiveBoss(); // Clear active boss HP bar
         await this.saveAllUserData(usersToSave, saveStartTime, deathEventsToSave);
 
         // Emit clear event to frontend
         socket.emit('data_cleared');
+        socket.emit('boss_hp_update', null); // Hide boss HP bar
 
         // Notify history window to refresh
         notifyHistoryWindowRefresh();
@@ -510,7 +652,22 @@ class UserDataManager {
                 duration: endTime - timestamp,
                 userCount: users.size,
                 version: config.VERSION,
+                maxHpMonster: '',
             };
+
+            let maxHpMonsterId = 0;
+            for (const [id, hp] of this.enemyCache.maxHp.entries()) {
+                if (!maxHpMonsterId || hp > this.enemyCache.maxHp.get(maxHpMonsterId)) {
+                    maxHpMonsterId = id;
+                }
+            }
+            if (maxHpMonsterId && this.enemyCache.name.has(maxHpMonsterId)) {
+                summary.maxHpMonster = this.enemyCache.name.get(maxHpMonsterId);
+            }
+            if (!summary.maxHpMonster) {
+                summary.maxHpMonster = this.maxHpMonster;
+                this.maxHpMonster = '';
+            }
 
             const allUsersData = {};
             const userDatas = new Map();

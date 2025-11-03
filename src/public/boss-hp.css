@@ -1,0 +1,130 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Roboto Condensed', sans-serif;
+    background: transparent;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+}
+
+/* Boss HP Overlay */
+.boss-hp-overlay {
+    position: fixed;
+    top: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 600px;
+    padding: 4px;
+    z-index: 9999;
+    cursor: move;
+    -webkit-app-region: drag;
+}
+
+.boss-hp-overlay.hidden {
+    display: none;
+}
+
+.boss-hp-container {
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(30, 30, 30, 0.95));
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    padding: 6px 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.boss-name {
+    color: #ffd700;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    min-width: 120px;
+}
+
+.boss-hp-bar-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+}
+
+.boss-hp-bar {
+    flex: 1;
+    height: 14px;
+    background: rgba(40, 40, 40, 0.9);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 7px;
+    overflow: hidden;
+    position: relative;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.boss-hp-fill {
+    height: 100%;
+    width: 100%;
+    background: linear-gradient(90deg, #ff1744 0%, #d50000 100%);
+    transition: width 0.3s ease, background 0.3s ease;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(255, 23, 68, 0.5);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(255, 23, 68, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 20px rgba(255, 23, 68, 0.8);
+    }
+}
+
+/* HP percentage color changes */
+.boss-hp-fill.medium {
+    background: linear-gradient(90deg, #ff9100 0%, #ff6d00 100%);
+    box-shadow: 0 0 10px rgba(255, 145, 0, 0.5);
+}
+
+.boss-hp-fill.low {
+    background: linear-gradient(90deg, #aa00ff 0%, #6200ea 100%);
+    box-shadow: 0 0 10px rgba(170, 0, 255, 0.5);
+    animation: pulse-fast 1s ease-in-out infinite;
+}
+
+@keyframes pulse-fast {
+    0%, 100% {
+        box-shadow: 0 0 10px rgba(170, 0, 255, 0.5);
+    }
+    50% {
+        box-shadow: 0 0 25px rgba(170, 0, 255, 1);
+    }
+}
+
+.boss-hp-text {
+    color: #ffffff;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    min-width: 120px;
+    text-align: right;
+}
+
+.boss-hp-text span {
+    color: #fff;
+}
+
+#bossHpPercent {
+    color: #4caf50;
+    font-weight: 700;
+}

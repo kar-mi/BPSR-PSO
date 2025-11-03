@@ -7,6 +7,7 @@ import { createRequire } from 'module';
 import monsterNames from '../tables/monster_names.json' with { type: 'json' };
 import { BinaryReader } from '../models/BinaryReader.js';
 import userDataManager from './UserDataManager.js';
+import socket from './Socket.js';
 
 const require = createRequire(import.meta.url);
 const pb = require('../algo/blueprotobuf.js');
@@ -168,18 +169,35 @@ const isUuidMonster = (uuid) => {
 
 /**
  * Find enemy data from cache using entity ID
+ * Uses multi-tier lookup: active cache -> persistent data -> null
  * @param {number} targetId - The target entity ID
  * @returns {{name: string|null, attrId: number|null}} Enemy data or nulls if not found
  */
 const findEnemyDataByEntityId = (targetId) => {
-    // Check if we have name or attrId for this entity
-    const name = userDataManager.enemyCache.name.get(targetId) || null;
-    const attrId = userDataManager.enemyCache.attrId.get(targetId);
+    // Tier 1: Check active cache (most recent data)
+    const cachedName = userDataManager.enemyCache.name.get(targetId);
+    const cachedAttrId = userDataManager.enemyCache.attrId.get(targetId);
 
-    // Return attrId as null if undefined, otherwise return the value (including 0)
+    if (cachedName || cachedAttrId !== undefined) {
+        return {
+            name: cachedName || null,
+            attrId: cachedAttrId !== undefined ? cachedAttrId : null
+        };
+    }
+
+    // Tier 2: Check persistent data (survives cache clears)
+    const persistentData = userDataManager.persistentEnemyData.get(targetId);
+    if (persistentData) {
+        return {
+            name: persistentData.name,
+            attrId: persistentData.attrId
+        };
+    }
+
+    // Tier 3: Not found anywhere
     return {
-        name: name,
-        attrId: attrId !== undefined ? attrId : null
+        name: null,
+        attrId: null
     };
 };
 
@@ -250,6 +268,14 @@ export class PacketProcessor {
                 this._processEnemyAttrs(targetUuid.toNumber(), attrCollection.Attrs);
             }
         }
+
+        const BuffEffectSync = aoiSyncDelta.BuffEffect;
+        if (isTargetMonster && BuffEffectSync && BuffEffectSync.BuffEffects) {
+            const BuffEffects = BuffEffectSync.BuffEffects;
+            for (const BuffEffect of BuffEffects) {
+            }
+        }
+
 
         const skillEffect = aoiSyncDelta.SkillEffects;
         if (!skillEffect || !skillEffect.Damages) {
@@ -331,6 +357,7 @@ export class PacketProcessor {
                 if (isDead) {
                     const targetId = targetUuid.toNumber();
                     userDataManager.setAttrKV(targetId, 'hp', 0);
+                    userDataManager.enemyCache.hp.set(targetUuid.toNumber(), 0);
                     // Log player death
                     const playerName = userDataManager.getUser(targetId).name || 'Unknown';
                     const attackerId = attackerUuid.toNumber();
@@ -346,7 +373,7 @@ export class PacketProcessor {
                         }
                     }
                     const deathLog = `[DEATH] Player: ${playerName}#${targetId} killed by ${killerName}`;
-                    logger.info(deathLog);
+                    //logger.info(deathLog);
                     userDataManager.addLog(deathLog);
 
                     // Record death event with recent damage context
@@ -694,10 +721,17 @@ export class PacketProcessor {
                 }
                 case AttrType.AttrHp: {
                     userDataManager.enemyCache.hp.set(enemyUid, reader.int32());
+                    // Update boss HP if this enemy is a boss
+                    userDataManager.updateActiveBossHp(enemyUid);
                     break;
                 }
                 case AttrType.AttrMaxHp: {
-                    userDataManager.enemyCache.maxHp.set(enemyUid, reader.int32());
+                    const maxHp = reader.int32();
+                    userDataManager.enemyCache.maxHp.set(enemyUid, maxHp);
+                    // Proactively persist if this is a high-HP enemy
+                    userDataManager.persistEnemyDataIfImportant(enemyUid);
+                    // Update boss HP if this enemy is a boss
+                    userDataManager.updateActiveBossHp(enemyUid);
                     break;
                 }
             }
@@ -715,6 +749,17 @@ export class PacketProcessor {
                     continue;
                 }
                 const entityUid = entityUuid.shiftRight(16).toNumber();
+
+                if (disappearEntity.Type == pb.EDisappearType.EDisappearDead) {
+                    userDataManager.enemyCache.hp.set(entityUid, 0);
+
+                    // Check if this was the active boss and clear it
+                    const activeBoss = userDataManager.getActiveBoss();
+                    if (activeBoss && activeBoss.entityId === entityUid) {
+                        userDataManager.clearActiveBoss();
+                        socket.emit('boss_hp_update', null);
+                    }
+                }
 
                 // Clean up enemy cache when entity disappears
                 if (userDataManager.enemyCache.name.has(entityUid)) {

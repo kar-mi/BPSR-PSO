@@ -6,11 +6,13 @@
 export const paths = {
     // Base directories
     logs: './logs',
+    data: './',
 
     // JSON configuration files - saved in same directory as executable
     settings: './settings.json',
     users: './users.json',
     windowConfig: './windowConfig.json',
+    bossHpWindowConfig: './boss-hp-window.json',
     keybinds: './keybinds.json',
     networkSettings: './networkSettings.json',
 };

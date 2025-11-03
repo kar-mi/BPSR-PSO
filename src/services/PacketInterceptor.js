@@ -145,7 +145,35 @@ export class PacketInterceptor {
             });
 
             const processEthPacket = async (frameBuffer) => {
-                const ethPacket = decoders.Ethernet(frameBuffer);
+                let ethPacket;
+                if (linkType === 'ETHERNET') {
+                    ethPacket = decoders.Ethernet(frameBuffer);
+                
+                // possible vpn/non ethernet fixes
+                } else if (linkType === 'NULL') {
+                    ethPacket = {
+                        info: {
+                            dstmac: '44:69:6d:6f:6c:65',
+                            srcmac: '44:69:6d:6f:6c:65',
+                            type: frameBuffer.readUInt32LE() === 2 ? 2048 : 75219598273637n,
+                            vlan: undefined,
+                            length: undefined,
+                        },
+                        offset: 4,
+                    };
+
+                } else if (linkType === 'LINKTYPE_LINUX_SLL') {
+                    ethPacket = {
+                        info: {
+                            dstmac: '44:69:6d:6f:6c:65',
+                            srcmac: '44:69:6d:6f:6c:65',
+                            type: frameBuffer.readUInt32BE(14) === 0x0800 ? 2048 : 75219598273637n,
+                            vlan: undefined,
+                            length: undefined,
+                        },
+                        offset: 16,
+                    };
+                }
                 if (ethPacket.info.type !== PROTOCOL.ETHERNET.IPV4) return;
 
                 const ipPacket = decoders.IPV4(frameBuffer, ethPacket.offset);
@@ -158,6 +186,7 @@ export class PacketInterceptor {
                 const buf = Buffer.from(tcpBuffer.subarray(tcpPacket.hdrlen));
                 const { srcport, dstport } = tcpPacket.info;
                 const src_server = `${srcaddr}:${srcport} -> ${dstaddr}:${dstport}`;
+                const src_server_re = `${dstaddr}:${dstport} -> ${srcaddr}:${srcport}`;
 
                 // Skip empty TCP packets (e.g., FIN, RST, ACK without data)
                 if (buf.length === 0) {
@@ -166,7 +195,7 @@ export class PacketInterceptor {
 
                 await tcp_lock.acquire();
                 try {
-                    if (current_server !== src_server) {
+                    if (current_server !== src_server && current_server !== src_server_re) {
                         try {
                             if (buf.length > 4 && buf[4] == 0) {
                                 const data = buf.subarray(10);
@@ -219,6 +248,35 @@ export class PacketInterceptor {
                                         clearDataOnServerChange();
                                         logger.info('Got Scene Server Address by Login Return Packet: ' + src_server);
                                     }
+                                }
+                            }
+                        } catch (e) {
+                            // Server identification packet parsing failed - this is expected for non-game traffic
+                            logger.debug(`Server identification failed: ${e.message}`);
+                        }
+                        try {
+                            //Attempt to identify the server through a reported small packet
+                            if (buf[4] == 0 && buf[5] == 5) {
+                                const data = buf.subarray(10);
+                                if (data.length) {
+                                    const stream = Readable.from(data, { objectMode: false });
+                                    let data1;
+                                    do {
+                                        const len_buf = stream.read(4);
+                                        if (!len_buf) break;
+                                        data1 = stream.read(len_buf.readUInt32BE() - 4);
+                                        const signature = Buffer.from([0x00, 0x06, 0x26, 0xad, 0x66, 0x00]);
+                                        if (Buffer.compare(data1.subarray(5, 5 + signature.length), signature)) break;
+                                        try {
+                                            if (current_server !== src_server_re) {
+                                                current_server = src_server_re;
+                                                clearTcpCache();
+                                                tcp_next_seq = tcpPacket.info.ackno;
+                                                clearDataOnServerChange();
+                                                logger.info('Got Scene Server Address by FrameUp Notify Packet: ' + src_server_re);
+                                            }
+                                        } catch (e) {}
+                                    } while (data1 && data1.length);
                                 }
                             }
                         } catch (e) {

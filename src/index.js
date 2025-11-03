@@ -11,6 +11,7 @@ async function initialize() {
     // --- Dynamic Imports ---
     // Now that we know NpCap is installed, we can safely import the rest of our application modules.
     const { default: window } = await import('./client/Window.js');
+    const { default: bossHpWindow } = await import('./client/BossHpWindow.js');
     const { registerShortcuts } = await import('./client/shortcuts.js');
     const { default: server } = await import('./server.js');
     await import('./client/IpcListeners.js');
@@ -20,7 +21,7 @@ async function initialize() {
         app.setAppUserModelId(app.name);
     }
 
-    window.create();
+    const mainWindow = window.create();
     registerShortcuts();
 
     try {
@@ -29,6 +30,10 @@ async function initialize() {
 
         console.log(`[Main Process] Server started. Loading URL: ${serverUrl}`);
         window.loadURL(serverUrl);
+
+        // Create boss HP bar window as child of main window
+        console.log('[Main Process] Creating boss HP bar window...');
+        bossHpWindow.create(serverUrl, mainWindow);
     } catch (error) {
         console.error('[Main Process] CRITICAL: Failed to start server:', error);
         app.quit();

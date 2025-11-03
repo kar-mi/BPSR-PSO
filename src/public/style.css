@@ -1616,3 +1616,111 @@ body {
     color: rgba(255, 255, 255, 0.5);
     font-size: 14px;
 }
+
+/* Boss HP Bar Overlay */
+.boss-hp-overlay {
+    pointer-events: none;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 9999;
+    padding: 10px 20px;
+    transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.boss-hp-overlay.hidden {
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
+.boss-hp-container {
+    background: linear-gradient(135deg, rgba(20, 20, 20, 0.95), rgba(40, 20, 20, 0.95));
+    border: 2px solid rgba(220, 53, 69, 0.8);
+    border-radius: 8px;
+    padding: 12px 20px;
+    box-shadow: 0 4px 20px rgba(220, 53, 69, 0.4),
+                inset 0 0 20px rgba(220, 53, 69, 0.1);
+    backdrop-filter: blur(10px);
+}
+
+.boss-name {
+    color: #ff6b6b;
+    font-size: 18px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+    text-shadow: 0 0 10px rgba(255, 107, 107, 0.8),
+                 0 2px 4px rgba(0, 0, 0, 0.8);
+    text-align: center;
+}
+
+.boss-hp-bar-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.boss-hp-bar {
+    width: 100%;
+    height: 24px;
+    background: rgba(0, 0, 0, 0.6);
+    border: 1px solid rgba(220, 53, 69, 0.5);
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.8);
+    position: relative;
+}
+
+.boss-hp-fill {
+    height: 100%;
+    background: linear-gradient(90deg,
+        rgba(220, 53, 69, 1) 0%,
+        rgba(255, 107, 107, 1) 50%,
+        rgba(220, 53, 69, 1) 100%);
+    border-radius: 12px;
+    transition: width 0.4s ease-out;
+    box-shadow: 0 0 20px rgba(220, 53, 69, 0.8),
+                inset 0 2px 4px rgba(255, 255, 255, 0.3),
+                inset 0 -2px 4px rgba(0, 0, 0, 0.3);
+    animation: bossHpPulse 2s ease-in-out infinite;
+    position: relative;
+}
+
+.boss-hp-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 50%;
+    background: linear-gradient(180deg,
+        rgba(255, 255, 255, 0.3) 0%,
+        rgba(255, 255, 255, 0) 100%);
+    border-radius: 12px 12px 0 0;
+}
+
+@keyframes bossHpPulse {
+    0%, 100% {
+        filter: brightness(1);
+    }
+    50% {
+        filter: brightness(1.2);
+    }
+}
+
+.boss-hp-text {
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 600;
+    text-align: center;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    letter-spacing: 0.5px;
+}
+
+.boss-hp-text span {
+    color: #ff6b6b;
+    font-weight: 700;
+}
