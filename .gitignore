@@ -99,6 +99,8 @@ windowConfig.json
 keybinds.json
 networkSettings.json
 boss-hp-window.json
+history-window.json
+settings-window.json
 
 # Settings in any subdirectory
 **/settings.json
@@ -107,5 +109,7 @@ boss-hp-window.json
 **/keybinds.json
 **/networkSettings.json
 **/boss-hp-window.json
+**/history-window.json
+**/settings-window.json
 
 **/.vscode/*

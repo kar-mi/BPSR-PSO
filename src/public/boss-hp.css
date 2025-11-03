@@ -96,7 +96,7 @@ body {
 }
 
 .boss-hp-fill.low {
-    background: linear-gradient(90deg, #aa00ff 0%, #6200ea 100%);
+    background: linear-gradient(90deg, #df6060 0%, #dc3e3e 100%);
     box-shadow: 0 0 10px rgba(170, 0, 255, 0.5);
     animation: pulse-fast 1s ease-in-out infinite;
 }

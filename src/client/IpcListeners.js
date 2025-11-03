@@ -2,6 +2,8 @@ import { app, ipcMain, BrowserWindow } from 'electron';
 import { keybindManager } from './shortcuts.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import { paths } from '../config/paths.js';
+import { loadWindowConfig, saveWindowConfig } from '../utils/windowConfig.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -47,9 +49,19 @@ ipcMain.on('open-history-window', async (event) => {
 
     const mainWindow = BrowserWindow.fromWebContents(event.sender);
 
-    historyWindow = new BrowserWindow({
+    // Load saved position
+    const config = loadWindowConfig(paths.historyWindowConfig, {
         width: 1000,
         height: 700,
+        x: undefined,
+        y: undefined,
+    });
+
+    historyWindow = new BrowserWindow({
+        width: config.width,
+        height: config.height,
+        x: config.x,
+        y: config.y,
         minWidth: 600,
         minHeight: 400,
         transparent: true,
@@ -70,6 +82,10 @@ ipcMain.on('open-history-window', async (event) => {
     historyWindow.setMovable(true);
     historyWindow.loadFile(historyHtmlPath);
 
+    // Save position on move and close
+    historyWindow.on('move', () => saveWindowConfig(historyWindow, paths.historyWindowConfig));
+    historyWindow.on('resize', () => saveWindowConfig(historyWindow, paths.historyWindowConfig));
+    historyWindow.on('close', () => saveWindowConfig(historyWindow, paths.historyWindowConfig));
     historyWindow.on('closed', () => {
         historyWindow = null;
     });
@@ -90,9 +106,19 @@ ipcMain.on('open-settings-window', async (event) => {
 
     const mainWindow = BrowserWindow.fromWebContents(event.sender);
 
-    settingsWindow = new BrowserWindow({
+    // Load saved position
+    const config = loadWindowConfig(paths.settingsWindowConfig, {
         width: 800,
         height: 600,
+        x: undefined,
+        y: undefined,
+    });
+
+    settingsWindow = new BrowserWindow({
+        width: config.width,
+        height: config.height,
+        x: config.x,
+        y: config.y,
         minWidth: 600,
         minHeight: 400,
         transparent: true,
@@ -113,6 +139,10 @@ ipcMain.on('open-settings-window', async (event) => {
     settingsWindow.setMovable(true);
     settingsWindow.loadFile(settingsHtmlPath);
 
+    // Save position on move and close
+    settingsWindow.on('move', () => saveWindowConfig(settingsWindow, paths.settingsWindowConfig));
+    settingsWindow.on('resize', () => saveWindowConfig(settingsWindow, paths.settingsWindowConfig));
+    settingsWindow.on('close', () => saveWindowConfig(settingsWindow, paths.settingsWindowConfig));
     settingsWindow.on('closed', () => {
         settingsWindow = null;
     });
