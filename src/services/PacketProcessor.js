@@ -725,7 +725,7 @@ export class PacketProcessor {
                 }
                 const entityUid = entityUuid.shiftRight(16).toNumber();
 
-                if (entity.Type == pb.EDisappearType.EDisappearDead) {
+                if (disappearEntity.Type == pb.EDisappearType.EDisappearDead) {
                     userDataManager.enemyCache.hp.set(entityUid, 0);
                 }
 
