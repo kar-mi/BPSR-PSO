@@ -335,15 +335,35 @@ class UserDataManager {
      * @param {string} enemyName - The enemy name
      */
     trackEnemyEncounter(enemyId, enemyName) {
-        // Check if this enemy ID is a boss
+        let isBoss = false;
+        let bossName = null;
+
+        // Method 1: Check by ID (attrId)
         if (bossData[enemyId]) {
-            const bossName = bossData[enemyId];
+            isBoss = true;
+            bossName = bossData[enemyId];
+        }
+
+        // Method 2: Check by name (fallback if ID not in table)
+        if (!isBoss && enemyName) {
+            // Check if enemy name matches any boss name in the table
+            for (const [id, name] of Object.entries(bossData)) {
+                if (name === enemyName || enemyName.includes(name) || name.includes(enemyName)) {
+                    isBoss = true;
+                    bossName = name;
+                    enemyId = id; // Update ID if found by name
+                    break;
+                }
+            }
+        }
+
+        if (isBoss && bossName) {
             this.encounteredBosses.add(JSON.stringify({
                 id: enemyId,
                 name: bossName,
                 displayName: enemyName || bossName
             }));
-            logger.debug(`Boss encountered: ${bossName} (ID: ${enemyId})`);
+            logger.debug(`Boss encountered: ${bossName} (ID: ${enemyId}, Display: ${enemyName || bossName})`);
         }
     }
 
