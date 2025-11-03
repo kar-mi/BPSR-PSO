@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Boss HP Bar</title>
+        <link
+            href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
+            rel="stylesheet"
+        />
+        <link rel="stylesheet" href="boss-hp.css" />
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+    </head>
+    <body>
+        <!-- Boss HP Bar -->
+        <div id="bossHpOverlay" class="boss-hp-overlay hidden">
+            <div class="boss-hp-container">
+                <div class="boss-name" id="bossName">Boss Name</div>
+                <div class="boss-hp-bar-wrapper">
+                    <div class="boss-hp-bar">
+                        <div class="boss-hp-fill" id="bossHpFill"></div>
+                    </div>
+                    <div class="boss-hp-text">
+                        <span id="bossHpCurrent">0</span> / <span id="bossHpMax">0</span>
+                        (<span id="bossHpPercent">100</span>%)
+                    </div>
+                </div>
+            </div>
+        </div>
+        <script type="module" src="boss-hp.js"></script>
+    </body>
+</html>
