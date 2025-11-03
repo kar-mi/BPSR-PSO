@@ -13,6 +13,8 @@ export const paths = {
     users: './users.json',
     windowConfig: './windowConfig.json',
     bossHpWindowConfig: './boss-hp-window.json',
+    historyWindowConfig: './history-window.json',
+    settingsWindowConfig: './settings-window.json',
     keybinds: './keybinds.json',
     networkSettings: './networkSettings.json',
 };
