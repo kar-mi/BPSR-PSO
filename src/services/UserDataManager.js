@@ -39,6 +39,9 @@ class UserDataManager {
         // Track encountered bosses during the fight
         this.encounteredBosses = new Set();
 
+        // Active boss tracking for HP bar
+        this.activeBoss = null; // { entityId, name, hp, maxHp, attrId }
+
         // Track recent damage events for death reports (playerId -> array of recent damage events)
         this.recentDamageEvents = new Map();
         this.maxRecentDamageEvents = 5; // Keep last 5 damage events per player
@@ -367,6 +370,76 @@ class UserDataManager {
         }
     }
 
+    /**
+     * Update active boss HP (for boss HP bar overlay)
+     * @param {number} entityId - Enemy entity ID
+     */
+    updateActiveBossHp(entityId) {
+        const name = this.enemyCache.name.get(entityId);
+        const attrId = this.enemyCache.attrId.get(entityId);
+        const hp = this.enemyCache.hp.get(entityId);
+        const maxHp = this.enemyCache.maxHp.get(entityId);
+
+        // Check if this is a boss
+        let isBoss = false;
+        if (attrId && bossData[attrId]) {
+            isBoss = true;
+        } else if (name) {
+            // Check by name
+            for (const [id, bossName] of Object.entries(bossData)) {
+                if (name === bossName || name.includes(bossName) || bossName.includes(name)) {
+                    isBoss = true;
+                    break;
+                }
+            }
+        }
+
+        if (!isBoss) return null;
+
+        // If no active boss or different boss, set as active
+        if (!this.activeBoss || this.activeBoss.entityId !== entityId) {
+            this.activeBoss = {
+                entityId,
+                name: name || 'Unknown Boss',
+                hp: hp || 0,
+                maxHp: maxHp || 0,
+                attrId: attrId || null
+            };
+        } else {
+            // Update existing active boss HP
+            this.activeBoss.hp = hp || 0;
+            if (maxHp) this.activeBoss.maxHp = maxHp;
+            if (name) this.activeBoss.name = name;
+        }
+
+        // Emit boss HP update via WebSocket
+        socket.emit('boss_hp_update', {
+            name: this.activeBoss.name,
+            hp: this.activeBoss.hp,
+            maxHp: this.activeBoss.maxHp
+        });
+
+        return this.activeBoss;
+    }
+
+    /**
+     * Get active boss data
+     */
+    getActiveBoss() {
+        // Clear active boss if dead
+        if (this.activeBoss && this.activeBoss.hp <= 0) {
+            this.activeBoss = null;
+        }
+        return this.activeBoss;
+    }
+
+    /**
+     * Clear active boss
+     */
+    clearActiveBoss() {
+        this.activeBoss = null;
+    }
+
     setProfession(uid, profession) {
         const user = this.getUser(uid);
         if (user.profession !== profession) {
@@ -546,10 +619,12 @@ class UserDataManager {
         this.encounteredBosses.clear(); // Clear boss tracking for new fight
         this.clearDeathEvents(); // Clear death tracking for new fight
         this.persistentEnemyData.clear(); // Clear persistent enemy data for new fight
+        this.clearActiveBoss(); // Clear active boss HP bar
         await this.saveAllUserData(usersToSave, saveStartTime, deathEventsToSave);
 
         // Emit clear event to frontend
         socket.emit('data_cleared');
+        socket.emit('boss_hp_update', null); // Hide boss HP bar
 
         // Notify history window to refresh
         notifyHistoryWindowRefresh();

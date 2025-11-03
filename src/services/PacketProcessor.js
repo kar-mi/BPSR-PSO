@@ -7,6 +7,7 @@ import { createRequire } from 'module';
 import monsterNames from '../tables/monster_names.json' with { type: 'json' };
 import { BinaryReader } from '../models/BinaryReader.js';
 import userDataManager from './UserDataManager.js';
+import socket from './Socket.js';
 
 const require = createRequire(import.meta.url);
 const pb = require('../algo/blueprotobuf.js');
@@ -720,6 +721,8 @@ export class PacketProcessor {
                 }
                 case AttrType.AttrHp: {
                     userDataManager.enemyCache.hp.set(enemyUid, reader.int32());
+                    // Update boss HP if this enemy is a boss
+                    userDataManager.updateActiveBossHp(enemyUid);
                     break;
                 }
                 case AttrType.AttrMaxHp: {
@@ -727,6 +730,8 @@ export class PacketProcessor {
                     userDataManager.enemyCache.maxHp.set(enemyUid, maxHp);
                     // Proactively persist if this is a high-HP enemy
                     userDataManager.persistEnemyDataIfImportant(enemyUid);
+                    // Update boss HP if this enemy is a boss
+                    userDataManager.updateActiveBossHp(enemyUid);
                     break;
                 }
             }
@@ -747,6 +752,13 @@ export class PacketProcessor {
 
                 if (disappearEntity.Type == pb.EDisappearType.EDisappearDead) {
                     userDataManager.enemyCache.hp.set(entityUid, 0);
+
+                    // Check if this was the active boss and clear it
+                    const activeBoss = userDataManager.getActiveBoss();
+                    if (activeBoss && activeBoss.entityId === entityUid) {
+                        userDataManager.clearActiveBoss();
+                        socket.emit('boss_hp_update', null);
+                    }
                 }
 
                 // Clean up enemy cache when entity disappears

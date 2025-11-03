@@ -12,6 +12,7 @@ let columnsContainer, helpContainer, passthroughTitle, passthroughKeybind, encou
 let pauseButton, clearButton, helpButton, settingsButton, closeButton;
 let allButtons;
 let historyButton;
+let bossHpOverlay, bossName, bossHpFill, bossHpCurrent, bossHpMax, bossHpPercent;
 
 let allUsers = {};
 let userColors = {};
@@ -27,6 +28,50 @@ const MAX_RECONNECT_INTERVAL = 30000; // Cap backoff at 30s
 //Timer
 let encounterStartTime = null;
 let timerInterval = null;
+
+// Boss HP tracking
+function updateBossHp(bossData) {
+    if (!bossData || !bossHpOverlay) return;
+
+    const { name, hp, maxHp } = bossData;
+
+    // Show or hide the overlay
+    if (hp > 0 && maxHp > 0) {
+        bossHpOverlay.classList.remove('hidden');
+
+        // Update boss name
+        bossName.textContent = name || 'Unknown Boss';
+
+        // Update HP values
+        bossHpCurrent.textContent = formatNumber(hp);
+        bossHpMax.textContent = formatNumber(maxHp);
+
+        // Calculate percentage
+        const percentage = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+        bossHpPercent.textContent = percentage.toFixed(1);
+
+        // Update HP bar width
+        bossHpFill.style.width = `${percentage}%`;
+
+        // Change color based on HP percentage
+        if (percentage <= 20) {
+            bossHpFill.style.background = 'linear-gradient(90deg, rgba(138, 43, 226, 1) 0%, rgba(186, 85, 211, 1) 50%, rgba(138, 43, 226, 1) 100%)';
+        } else if (percentage <= 50) {
+            bossHpFill.style.background = 'linear-gradient(90deg, rgba(255, 140, 0, 1) 0%, rgba(255, 165, 0, 1) 50%, rgba(255, 140, 0, 1) 100%)';
+        } else {
+            bossHpFill.style.background = 'linear-gradient(90deg, rgba(220, 53, 69, 1) 0%, rgba(255, 107, 107, 1) 50%, rgba(220, 53, 69, 1) 100%)';
+        }
+    } else {
+        // Boss is dead, hide overlay
+        bossHpOverlay.classList.add('hidden');
+    }
+}
+
+function hideBossHp() {
+    if (bossHpOverlay) {
+        bossHpOverlay.classList.add('hidden');
+    }
+}
 
 function updateAll() {
     const usersArray = Object.values(allUsers).filter((user) => user.total_dps > 0 || user.total_hps > 0);
@@ -167,6 +212,7 @@ function connectWebSocket() {
         userColors = {};
         updateAll();
         stopEncounterTimer();
+        hideBossHp();
     });
 
     socket.on('new_fight_started', (data) => {
@@ -175,6 +221,7 @@ function connectWebSocket() {
         userColors = {};
         updateAll();
         startEncounterTimer();
+        hideBossHp();
     });
 
     socket.on('fight_ended', () => {
@@ -183,6 +230,11 @@ function connectWebSocket() {
         userColors = {};
         clearData();
         updateAll();
+        hideBossHp();
+    });
+
+    socket.on('boss_hp_update', (bossData) => {
+        updateBossHp(bossData);
     });
 
     socket.on('connect_error', (error) => {
@@ -334,6 +386,14 @@ function initializeDOMElements() {
     closeButton = document.getElementById('closeButton');
     historyButton = document.getElementById('historyButton');
     allButtons = [clearButton, pauseButton, helpButton, settingsButton, historyButton, closeButton];
+
+    // Boss HP bar elements
+    bossHpOverlay = document.getElementById('bossHpOverlay');
+    bossName = document.getElementById('bossName');
+    bossHpFill = document.getElementById('bossHpFill');
+    bossHpCurrent = document.getElementById('bossHpCurrent');
+    bossHpMax = document.getElementById('bossHpMax');
+    bossHpPercent = document.getElementById('bossHpPercent');
 }
 
 /**
