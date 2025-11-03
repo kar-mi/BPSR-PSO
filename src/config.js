@@ -5,6 +5,7 @@ class Config {
         this.GLOBAL_SETTINGS = {
             autoClearOnServerChange: true,
             autoClearOnTimeout: true,
+            autoClearOnBossSpawn: true,
         };
     }
 }
