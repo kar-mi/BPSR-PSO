@@ -355,7 +355,7 @@ class UserDataManager {
         if (!isBoss && enemyName) {
             // Check if enemy name matches any boss name in the table
             for (const [id, name] of Object.entries(bossData)) {
-                if (name === enemyName || enemyName.includes(name) || name.includes(enemyName)) {
+                if (name === enemyName || name.includes(enemyName)) {
                     isBoss = true;
                     bossName = name;
                     enemyId = id; // Update ID if found by name
