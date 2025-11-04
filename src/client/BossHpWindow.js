@@ -114,7 +114,9 @@ class BossHpWindow {
      */
     close() {
         if (this._window) {
-            this._window.close();
+            this._saveConfig();
+            this._window.destroy();
+            this._window = null;
         }
     }
 
