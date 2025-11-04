@@ -391,13 +391,16 @@ class UserDataManager {
 
         // Case 1: First boss encounter (no previous boss tracked)
         if (!this.lastSeenBoss) {
-            // New boss at full HP - clear the fight
+            // New boss at full HP - clear the fight and persist this boss to new fight
             if (hp === maxHp) {
                 logger.info(`Boss spawned: ${name} (${entityId}) - Auto-clearing fight`);
-                this.clearAll().catch((error) => {
+                // Clear fight and then persist the new boss
+                this.clearAll().then(() => {
+                    // After clear, persist the boss that triggered the new fight
+                    this.persistBossToNewFight(entityId, name, maxHp, attrId);
+                }).catch((error) => {
                     logger.error('Error during boss spawn clear:', error);
                 });
-                // Don't set lastSeenBoss yet - clearAll will reset it
                 return;
             }
             // Boss already damaged (cutscene scenario) - don't clear, just track it
@@ -416,10 +419,13 @@ class UserDataManager {
 
             if (wasAlreadyDamaged && isNowAtFullHp) {
                 logger.info(`Boss wipe detected: ${name} (${entityId}) HP reset to max - Auto-clearing fight`);
-                this.clearAll().catch((error) => {
+                // Clear fight and then persist this boss to new fight
+                this.clearAll().then(() => {
+                    // After clear, persist the boss that triggered the new fight
+                    this.persistBossToNewFight(entityId, name, maxHp, attrId);
+                }).catch((error) => {
                     logger.error('Error during boss wipe clear:', error);
                 });
-                // Don't update lastSeenBoss - clearAll will reset it
                 return;
             }
 
@@ -429,18 +435,52 @@ class UserDataManager {
         }
 
         // Case 3: Different boss encountered
-        // New boss at full HP - clear the fight
+        // New boss at full HP - clear the fight and persist this boss to new fight
         if (hp === maxHp) {
             logger.info(`Different boss spawned: ${name} (${entityId}) - Auto-clearing fight`);
-            this.clearAll().catch((error) => {
+            // Clear fight and then persist the new boss
+            this.clearAll().then(() => {
+                // After clear, persist the boss that triggered the new fight
+                this.persistBossToNewFight(entityId, name, maxHp, attrId);
+            }).catch((error) => {
                 logger.error('Error during different boss spawn clear:', error);
             });
-            // Don't set lastSeenBoss yet - clearAll will reset it
             return;
         }
 
         // Different boss but already damaged (unlikely scenario) - track it
         this.lastSeenBoss = { entityId, name, maxHp, lastSeenHp: hp, attrId };
+    }
+
+    /**
+     * Persist boss data to the new fight folder after auto-clear
+     * This ensures the boss that triggered the fight appears in the logs
+     * @param {number} entityId - Boss entity ID
+     * @param {string} name - Boss name
+     * @param {number} maxHp - Boss max HP
+     * @param {number} attrId - Boss attribute ID
+     */
+    persistBossToNewFight(entityId, name, maxHp, attrId) {
+        // Add boss to persistent enemy data for the new fight (for cache lookups)
+        this.persistentEnemyData.set(entityId, {
+            name: name || 'Unknown Boss',
+            attrId: attrId || null,
+            maxHp: maxHp || 0
+        });
+
+        // Track this boss as encountered using the same format as trackBossEncounter
+        const bossName = attrId && bossData[attrId] ? bossData[attrId] : name;
+        if (bossName) {
+            this.encounteredBosses.add(JSON.stringify({
+                id: entityId,
+                name: bossName,
+                displayName: name || bossName
+            }));
+            logger.info(`Boss persisted to new fight: ${bossName} (ID: ${entityId}, Display: ${name || bossName})`);
+        }
+
+        // Set as last seen boss for wipe detection
+        this.lastSeenBoss = { entityId, name, maxHp, lastSeenHp: maxHp, attrId };
     }
 
     /**
