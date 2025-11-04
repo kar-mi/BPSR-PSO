@@ -1267,74 +1267,54 @@ body.main-window {
     overflow-y: auto;
     overflow-x: hidden;
     padding: 10px;
+    /* Reserve space for scrollbar to keep header/content aligned */
+    scrollbar-gutter: stable;
 }
 
 .stats-table {
     width: 100%;
     border-collapse: collapse;
     color: #e0e0e0;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    overflow: hidden;
+    font-size: 11px;
 }
 
-.stats-table thead tr {
-    display: grid;
-    grid-template-columns: 50px 1fr auto auto auto auto auto;
-    gap: 0px;
-    padding: 0 8px;
-}
-
-.stats-table thead tr.tanking-header {
-    grid-template-columns: 50px 1fr auto auto auto;
-}
-
-.stats-table thead th {
+.stats-table thead {
+    background: rgba(0, 0, 0, 0.5);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     position: sticky;
     top: 0;
-    background: rgba(0, 0, 0, 0.5);
-    padding: 10px 0;
+    z-index: 10;
+}
+
+.stats-table th {
+    padding: 10px 8px;
     text-align: left;
+    font-size: 10px;
     font-weight: 600;
-    font-size: 11px;
     color: #aaa;
     text-transform: uppercase;
-    letter-spacing: 0.5px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
-    z-index: 10;
-    cursor: pointer;
-    user-select: none;
-    transition: background-color 0.2s ease;
+    letter-spacing: 0.3px;
+    border-right: 1px solid rgba(255, 255, 255, 0.05);
+    white-space: nowrap;
 }
 
-.stats-table thead th:hover {
-    background: rgba(0, 0, 0, 0.6);
+.stats-table th:last-child {
+    border-right: none;
 }
 
-.stats-table thead th:first-child {
+.stats-table th:first-child {
     text-align: center;
 }
 
-.stats-table thead th:nth-child(3),
-.stats-table thead th:nth-child(4),
-.stats-table thead th:nth-child(5),
-.stats-table thead th:nth-child(6),
-.stats-table thead th:nth-child(7) {
+.stats-table th:nth-child(3),
+.stats-table th:nth-child(4),
+.stats-table th:nth-child(5),
+.stats-table th:nth-child(6),
+.stats-table th:nth-child(7) {
     text-align: right;
-    min-width: 70px;
-}
-
-.stats-table thead th.sortable::after {
-    content: ' ▼';
-    opacity: 0.3;
-    font-size: 8px;
-}
-
-.stats-table thead th.sorted-asc::after {
-    content: ' ▲';
-    opacity: 1;
-}
-
-.stats-table thead th.sorted-desc::after {
-    content: ' ▼';
-    opacity: 1;
 }
 
 .stats-table tbody tr {
