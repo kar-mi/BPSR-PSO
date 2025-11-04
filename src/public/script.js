@@ -5,7 +5,11 @@ import {
     getProfessionIconHtml,
     initializeOpacitySlider,
     initializeFontSize,
+    initializeTheme,
     setupFontSizeListener,
+    setupThemeListener,
+    initializeBackgroundImage,
+    setupBackgroundImageListener,
     renderDataList,
 } from './utils.js';
 
@@ -512,11 +516,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeDOMElements();
     initialize();
 
-    // Initialize font size
+    // Initialize font size and theme
     initializeFontSize();
+    initializeTheme();
+    initializeBackgroundImage();
 
-    // Set up font size listener
+    // Set up font size and theme listeners
     setupFontSizeListener();
+    setupThemeListener();
+    setupBackgroundImageListener();
 
     // Initialize opacity slider
     initializeOpacitySlider('opacitySlider', 'backgroundOpacity');

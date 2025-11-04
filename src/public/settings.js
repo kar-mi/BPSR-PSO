@@ -5,6 +5,8 @@ let networkAdapterSelect, refreshAdaptersButton;
 let timeoutSlider, timeoutValue;
 let autoClearTimeoutCheckbox, autoClearServerCheckbox, autoClearBossSpawnCheckbox;
 let fontSizeSlider, fontSizeValue;
+let themeSelector;
+let backgroundImagePath, browseBackgroundImageButton, clearBackgroundImageButton;
 let keybindList;
 let closeButton;
 let reloadCacheButton, cacheReloadStatus, fightTimestampInput;
@@ -217,6 +219,83 @@ async function applyFontSize(percentage) {
         window.electronAPI.broadcastFontSizeChange(percentage);
     } catch (error) {
         console.error('Error broadcasting font size change:', error);
+    }
+}
+
+/**
+ * Theme Settings Functions
+ */
+async function loadTheme() {
+    try {
+        const savedTheme = await settingsService.getSetting('theme', 'dark');
+        themeSelector.value = savedTheme;
+        applyTheme(savedTheme);
+    } catch (error) {
+        console.error('Error loading theme:', error);
+    }
+}
+
+async function updateTheme(theme) {
+    try {
+        await settingsService.updateSetting('theme', theme);
+        applyTheme(theme);
+        console.log(`Theme updated to ${theme}`);
+    } catch (error) {
+        console.error('Error updating theme:', error);
+    }
+}
+
+function applyTheme(theme) {
+    document.documentElement.setAttribute('data-theme', theme);
+    // Broadcast theme change to all windows
+    try {
+        window.electronAPI.broadcastThemeChange(theme);
+    } catch (error) {
+        console.error('Error broadcasting theme change:', error);
+    }
+}
+
+/**
+ * Background Image Settings Functions
+ */
+async function loadBackgroundImage() {
+    try {
+        const savedImagePath = await settingsService.getSetting('backgroundImage', '');
+        backgroundImagePath.value = savedImagePath || '';
+    } catch (error) {
+        console.error('Error loading background image:', error);
+    }
+}
+
+async function browseBackgroundImage() {
+    try {
+        const result = await window.electronAPI.selectBackgroundImage();
+        if (!result.canceled && result.filePath) {
+            backgroundImagePath.value = result.filePath;
+            await updateBackgroundImage(result.filePath);
+        }
+    } catch (error) {
+        console.error('Error selecting background image:', error);
+    }
+}
+
+async function clearBackgroundImage() {
+    try {
+        backgroundImagePath.value = '';
+        await updateBackgroundImage('');
+    } catch (error) {
+        console.error('Error clearing background image:', error);
+    }
+}
+
+async function updateBackgroundImage(imagePath) {
+    try {
+        await settingsService.updateSetting('backgroundImage', imagePath);
+        // Broadcast background image change to all windows
+        window.electronAPI.broadcastBackgroundImageChange(imagePath);
+        console.log(`Background image updated to: ${imagePath || 'none'}`);
+    } catch (error) {
+        console.error('Error updating background image:', error);
     }
 }
 
@@ -480,6 +559,10 @@ function initializeDOMElements() {
     autoClearBossSpawnCheckbox = document.getElementById('autoClearBossSpawnCheckbox');
     fontSizeSlider = document.getElementById('fontSizeSlider');
     fontSizeValue = document.getElementById('fontSizeValue');
+    themeSelector = document.getElementById('themeSelector');
+    backgroundImagePath = document.getElementById('backgroundImagePath');
+    browseBackgroundImageButton = document.getElementById('browseBackgroundImage');
+    clearBackgroundImageButton = document.getElementById('clearBackgroundImage');
     keybindList = document.getElementById('keybindList');
     closeButton = document.getElementById('closeButton');
     reloadCacheButton = document.getElementById('reloadCacheButton');
@@ -506,6 +589,8 @@ document.addEventListener('DOMContentLoaded', () => {
     loadInitialTimeout();
     loadAutoClearSettings();
     loadFontSize();
+    loadTheme();
+    loadBackgroundImage();
 
     // Timeout slider
     timeoutSlider.addEventListener('input', () => {
@@ -539,6 +624,20 @@ document.addEventListener('DOMContentLoaded', () => {
         fontSizeDebounceTimer = setTimeout(() => {
             updateFontSize(parseInt(fontSizeSlider.value));
         }, 300);
+    });
+
+    // Theme selector
+    themeSelector.addEventListener('change', (event) => {
+        updateTheme(event.target.value);
+    });
+
+    // Background image buttons
+    browseBackgroundImageButton.addEventListener('click', () => {
+        browseBackgroundImage();
+    });
+
+    clearBackgroundImageButton.addEventListener('click', () => {
+        clearBackgroundImage();
     });
 
     // Network adapter events

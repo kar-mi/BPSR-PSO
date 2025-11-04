@@ -1,4 +1,4 @@
-import { SERVER_URL, initializeFontSize, setupFontSizeListener } from './utils.js';
+import { SERVER_URL, initializeFontSize, initializeTheme, setupFontSizeListener, setupThemeListener } from './utils.js';
 
 // DOM elements
 let bossHpOverlay, bossName, bossHpFill, bossHpCurrent, bossHpMax, bossHpPercent;
@@ -95,11 +95,13 @@ function initializeDOMElements() {
  * Initialize the boss HP bar
  */
 document.addEventListener('DOMContentLoaded', () => {
-    // Initialize font size
+    // Initialize font size and theme
     initializeFontSize();
+    initializeTheme();
 
-    // Set up font size listener
+    // Set up font size and theme listeners
     setupFontSizeListener();
+    setupThemeListener();
 
     initializeDOMElements();
     initSocket();

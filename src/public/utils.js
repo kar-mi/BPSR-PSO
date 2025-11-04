@@ -241,6 +241,89 @@ export function setupFontSizeListener() {
 }
 
 /**
+ * Initialize and apply theme from settings
+ * This should be called on every page load to apply the global theme
+ */
+export async function initializeTheme() {
+    try {
+        const theme = await settingsService.getSetting('theme', 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+    } catch (error) {
+        console.error('Failed to load theme:', error);
+    }
+}
+
+/**
+ * Set up a listener for theme changes
+ * Applies theme when changed from settings
+ */
+export function setupThemeListener() {
+    if (!window.electronAPI || !window.electronAPI.onThemeChanged) {
+        console.warn('Theme listener not available');
+        return;
+    }
+
+    window.electronAPI.onThemeChanged((theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+    });
+}
+
+/**
+ * Initialize and apply background image from settings
+ * This should be called on main window load to apply the background image
+ */
+export async function initializeBackgroundImage() {
+    try {
+        const imagePath = await settingsService.getSetting('backgroundImage', '');
+        applyBackgroundImage(imagePath);
+    } catch (error) {
+        console.error('Failed to load background image:', error);
+    }
+}
+
+/**
+ * Set up a listener for background image changes
+ * Applies background image when changed from settings
+ */
+export function setupBackgroundImageListener() {
+    if (!window.electronAPI || !window.electronAPI.onBackgroundImageChanged) {
+        console.warn('Background image listener not available');
+        return;
+    }
+
+    window.electronAPI.onBackgroundImageChanged((imagePath) => {
+        applyBackgroundImage(imagePath);
+    });
+}
+
+/**
+ * Apply background image to the main window
+ * @param {string} imagePath - Path to the background image file
+ */
+function applyBackgroundImage(imagePath) {
+    const appWrapper = document.getElementById('app-wrapper');
+    if (!appWrapper) {
+        console.warn('app-wrapper element not found');
+        return;
+    }
+
+    if (imagePath) {
+        // Convert Windows path to file:// URL
+        const fileUrl = `file:///${imagePath.replace(/\\/g, '/')}`;
+        appWrapper.style.backgroundImage = `url("${fileUrl}")`;
+        appWrapper.style.backgroundSize = 'cover';
+        appWrapper.style.backgroundPosition = 'center';
+        appWrapper.style.backgroundRepeat = 'no-repeat';
+    } else {
+        // Clear background image
+        appWrapper.style.backgroundImage = '';
+        appWrapper.style.backgroundSize = '';
+        appWrapper.style.backgroundPosition = '';
+        appWrapper.style.backgroundRepeat = '';
+    }
+}
+
+/**
  * Initialize an opacity slider with settings API persistence
  * @param {string} sliderId - The ID of the slider element
  * @param {string} settingKey - The setting key to use for persistence

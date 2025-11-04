@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow, shell } from 'electron';
+import { app, ipcMain, BrowserWindow, shell, dialog } from 'electron';
 import { keybindManager } from './shortcuts.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -286,6 +286,44 @@ ipcMain.on('broadcast-font-size-change', (_event, percentage) => {
     BrowserWindow.getAllWindows().forEach((window) => {
         if (window && !window.isDestroyed()) {
             window.webContents.send('font-size-changed', percentage);
+        }
+    });
+});
+
+// Theme change broadcasting
+ipcMain.on('broadcast-theme-change', (_event, theme) => {
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+        if (window && !window.isDestroyed()) {
+            window.webContents.send('theme-changed', theme);
+        }
+    });
+});
+
+// Background image file picker
+ipcMain.handle('select-background-image', async (event) => {
+    const result = await dialog.showOpenDialog({
+        title: 'Select Background Image',
+        filters: [
+            { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'] },
+            { name: 'All Files', extensions: ['*'] },
+        ],
+        properties: ['openFile'],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { canceled: true };
+    }
+
+    return { canceled: false, filePath: result.filePaths[0] };
+});
+
+// Background image change broadcasting
+ipcMain.on('broadcast-background-image-change', (_event, imagePath) => {
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+        if (window && !window.isDestroyed()) {
+            window.webContents.send('background-image-changed', imagePath);
         }
     });
 });

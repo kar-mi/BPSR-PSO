@@ -32,4 +32,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Font size changes
     onFontSizeChanged: (callback) => ipcRenderer.on('font-size-changed', (_event, percentage) => callback(percentage)),
     broadcastFontSizeChange: (percentage) => ipcRenderer.send('broadcast-font-size-change', percentage),
+
+    // Theme changes
+    onThemeChanged: (callback) => ipcRenderer.on('theme-changed', (_event, theme) => callback(theme)),
+    broadcastThemeChange: (theme) => ipcRenderer.send('broadcast-theme-change', theme),
+
+    // Background image
+    selectBackgroundImage: () => ipcRenderer.invoke('select-background-image'),
+    onBackgroundImageChanged: (callback) => ipcRenderer.on('background-image-changed', (_event, imagePath) => callback(imagePath)),
+    broadcastBackgroundImageChange: (imagePath) => ipcRenderer.send('broadcast-background-image-change', imagePath),
 });

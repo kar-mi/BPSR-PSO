@@ -2,6 +2,67 @@
 :root {
     --main-bg-opacity: 0.05;
     --font-scale: 1;
+
+    /* Theme colors - default dark */
+    --theme-bg-primary: rgba(48, 51, 53, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(18, 21, 23, 0.3);
+    --theme-text-primary: #e0e0e0;
+    --theme-text-secondary: rgba(255, 255, 255, 0.7);
+    --theme-border: rgba(255, 255, 255, 0.1);
+}
+
+/* Theme: Light */
+:root[data-theme="light"] {
+    --theme-bg-primary: rgba(240, 240, 240, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(200, 200, 200, 0.5);
+    --theme-text-primary: #000000;
+    --theme-text-secondary: rgba(0, 0, 0, 0.8);
+    --theme-border: rgba(0, 0, 0, 0.15);
+}
+
+/* Theme: Pink Pastel - Darker */
+:root[data-theme="pink"] {
+    --theme-bg-primary: rgba(200, 140, 150, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(180, 120, 130, 0.5);
+    --theme-text-primary: #e0e0e0;
+    --theme-text-secondary: rgba(255, 255, 255, 0.7);
+    --theme-border: rgba(150, 80, 100, 0.3);
+}
+
+/* Theme: Purple Pastel - Darker */
+:root[data-theme="purple"] {
+    --theme-bg-primary: rgba(160, 140, 180, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(140, 120, 160, 0.5);
+    --theme-text-primary: #e0e0e0;
+    --theme-text-secondary: rgba(255, 255, 255, 0.7);
+    --theme-border: rgba(100, 70, 130, 0.3);
+}
+
+/* Theme: Blue Pastel - Darker */
+:root[data-theme="blue"] {
+    --theme-bg-primary: rgba(120, 150, 180, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(100, 130, 160, 0.5);
+    --theme-text-primary: #e0e0e0;
+    --theme-text-secondary: rgba(255, 255, 255, 0.7);
+    --theme-border: rgba(50, 90, 130, 0.3);
+}
+
+/* Theme: Red Pastel - Darker */
+:root[data-theme="red"] {
+    --theme-bg-primary: rgba(180, 120, 120, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(160, 100, 100, 0.5);
+    --theme-text-primary: #e0e0e0;
+    --theme-text-secondary: rgba(255, 255, 255, 0.7);
+    --theme-border: rgba(130, 50, 50, 0.3);
+}
+
+/* Theme: Green Pastel - Darker */
+:root[data-theme="green"] {
+    --theme-bg-primary: rgba(120, 160, 130, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(100, 140, 110, 0.5);
+    --theme-text-primary: #e0e0e0;
+    --theme-text-secondary: rgba(255, 255, 255, 0.7);
+    --theme-border: rgba(50, 100, 60, 0.3);
 }
 
 html {
@@ -119,11 +180,12 @@ body.main-window {
     box-sizing: border-box;
     border-radius: 12px;
     overflow: hidden;
-    background: rgba(48, 51, 53, var(--main-bg-opacity));
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--theme-bg-primary);
+    border: 1px solid var(--theme-border);
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
     box-shadow: 0 4px 30px rgba(0, 0, 0, 0.2);
+    color: var(--theme-text-primary);
 }
 
 .controls {
@@ -133,10 +195,11 @@ body.main-window {
     align-items: center;
     justify-content: space-between;
     padding: 8px 12px;
-    background: rgba(18, 21, 23, 0.3);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    background: var(--theme-bg-secondary);
+    border-bottom: 1px solid var(--theme-border);
     height: 25px;
     min-height: 25px;
+    color: var(--theme-text-primary);
 }
 
 .title-container {
@@ -149,9 +212,9 @@ body.main-window {
 .app-title {
     font-size: 16px;
     font-weight: 700;
-    color: #fff;
+    color: var(--theme-text-primary);
     white-space: nowrap;
-    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.7);
+    text-shadow: 1px 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .encounter-time {
@@ -381,7 +444,7 @@ body.main-window {
     display: flex;
     flex-direction: column;
     gap: 20px;
-    color: #fff;
+    color: var(--theme-text-primary);
     overflow-y: auto;
 }
 
@@ -394,7 +457,13 @@ body.main-window {
 
 .settings-option label {
     font-weight: 500;
-    color: #e0e0e0;
+    color: var(--theme-text-primary);
+}
+
+.settings-option select {
+    color: var(--theme-text-primary);
+    background: var(--theme-bg-secondary);
+    border: 1px solid var(--theme-border);
 }
 
 .settings-option input[type='range'] {
@@ -565,11 +634,11 @@ body.main-window {
 }
 
 .settings-section h3 {
-    color: #fff;
+    color: var(--theme-text-primary);
     font-size: 16px;
     font-weight: 600;
     margin: 0;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 1px solid var(--theme-border);
     padding-bottom: 8px;
 }
 
@@ -1209,7 +1278,7 @@ body.main-window {
 .stats-table thead tr {
     display: grid;
     grid-template-columns: 50px 1fr auto auto auto auto auto;
-    gap: 10px;
+    gap: 0px;
     padding: 0 8px;
 }
 
@@ -1220,14 +1289,15 @@ body.main-window {
 .stats-table thead th {
     position: sticky;
     top: 0;
-    background: rgba(60, 63, 65, 0.95);
+    background: rgba(0, 0, 0, 0.5);
     padding: 10px 0;
     text-align: left;
     font-weight: 600;
     font-size: 11px;
+    color: #aaa;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    border-bottom: 2px solid rgba(255, 255, 255, 0.2);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.1);
     z-index: 10;
     cursor: pointer;
     user-select: none;
@@ -1235,7 +1305,7 @@ body.main-window {
 }
 
 .stats-table thead th:hover {
-    background: rgba(70, 73, 75, 0.95);
+    background: rgba(0, 0, 0, 0.6);
 }
 
 .stats-table thead th:first-child {
@@ -1297,7 +1367,7 @@ body.main-window {
     position: relative;
     display: grid;
     grid-template-columns: 50px 1fr auto auto auto auto auto;
-    gap: 10px;
+    gap: 0px;
     padding: 10px 8px;
     z-index: 1;
 }
