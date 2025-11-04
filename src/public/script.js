@@ -4,6 +4,8 @@ import {
     formatNumber,
     getProfessionIconHtml,
     initializeOpacitySlider,
+    initializeFontSize,
+    setupFontSizeListener,
     renderDataList,
 } from './utils.js';
 
@@ -509,6 +511,12 @@ function showUpdateNotification(updateData) {
 document.addEventListener('DOMContentLoaded', () => {
     initializeDOMElements();
     initialize();
+
+    // Initialize font size
+    initializeFontSize();
+
+    // Set up font size listener
+    setupFontSizeListener();
 
     // Initialize opacity slider
     initializeOpacitySlider('opacitySlider', 'backgroundOpacity');

@@ -211,6 +211,36 @@ class SettingsService {
 export const settingsService = new SettingsService();
 
 /**
+ * Initialize and apply font size from settings
+ * This should be called on every page load to apply the global font size
+ */
+export async function initializeFontSize() {
+    try {
+        const fontSize = await settingsService.getSetting('fontSize', 100);
+        const scale = fontSize / 100;
+        document.documentElement.style.setProperty('--font-scale', scale);
+    } catch (error) {
+        console.error('Failed to load font size:', error);
+    }
+}
+
+/**
+ * Set up a listener for font size changes
+ * Applies zoom scale when font size is changed from settings
+ */
+export function setupFontSizeListener() {
+    if (!window.electronAPI || !window.electronAPI.onFontSizeChanged) {
+        console.warn('Font size listener not available');
+        return;
+    }
+
+    window.electronAPI.onFontSizeChanged((percentage) => {
+        const scale = percentage / 100;
+        document.documentElement.style.setProperty('--font-scale', scale);
+    });
+}
+
+/**
  * Initialize an opacity slider with settings API persistence
  * @param {string} sliderId - The ID of the slider element
  * @param {string} settingKey - The setting key to use for persistence

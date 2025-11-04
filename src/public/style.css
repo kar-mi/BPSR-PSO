@@ -1,5 +1,14 @@
 /* Global Styles & Resets */
-html,
+:root {
+    --main-bg-opacity: 0.05;
+    --font-scale: 1;
+}
+
+html {
+    font-size: 12px;
+    height: 100%;
+}
+
 body {
     height: 100%;
     margin: 0;
@@ -8,14 +17,15 @@ body {
     background-color: transparent;
     user-select: none;
     color: #e0e0e0;
-    font-size: 12px;
     box-sizing: border-box;
     min-width: 256px;
     -webkit-font-smoothing: antialiased;
+    zoom: var(--font-scale);
 }
 
-:root {
-    --main-bg-opacity: 0.05;
+/* Main window: don't zoom body, only zoom content container */
+body.main-window {
+    zoom: 1;
 }
 
 #app-wrapper {
@@ -35,9 +45,9 @@ body {
     z-index: 1000;
 }
 
-/* Edge handles */
+/* Edge handles - positioned inside window boundaries */
 .resize-handle-top {
-    top: 0;
+    top: 1px;
     left: 8px;
     right: 8px;
     height: 4px;
@@ -45,7 +55,7 @@ body {
 }
 
 .resize-handle-bottom {
-    bottom: 0;
+    bottom: 1px;
     left: 8px;
     right: 8px;
     height: 4px;
@@ -53,7 +63,7 @@ body {
 }
 
 .resize-handle-left {
-    left: 0;
+    left: 1px;
     top: 8px;
     bottom: 8px;
     width: 4px;
@@ -61,41 +71,41 @@ body {
 }
 
 .resize-handle-right {
-    right: 0;
+    right: 1px;
     top: 8px;
     bottom: 8px;
     width: 4px;
     cursor: ew-resize;
 }
 
-/* Corner handles */
+/* Corner handles - positioned inside window boundaries */
 .resize-handle-top-left {
-    top: 0;
-    left: 0;
+    top: 1px;
+    left: 1px;
     width: 8px;
     height: 8px;
     cursor: nwse-resize;
 }
 
 .resize-handle-top-right {
-    top: 0;
-    right: 0;
+    top: 1px;
+    right: 1px;
     width: 8px;
     height: 8px;
     cursor: nesw-resize;
 }
 
 .resize-handle-bottom-left {
-    bottom: 0;
-    left: 0;
+    bottom: 1px;
+    left: 1px;
     width: 8px;
     height: 8px;
     cursor: nesw-resize;
 }
 
 .resize-handle-bottom-right {
-    bottom: 0;
-    right: 0;
+    bottom: 1px;
+    right: 1px;
     width: 8px;
     height: 8px;
     cursor: nwse-resize;
@@ -305,6 +315,7 @@ body {
     padding: 2px;
     flex-direction: column;
     flex-wrap: nowrap;
+    zoom: var(--font-scale);
 }
 .columns-container::-webkit-scrollbar {
     width: 8px;
@@ -318,6 +329,49 @@ body {
     border-radius: 4px;
 }
 .columns-container::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+/* Global scrollbar styles for all scrollable containers */
+.settings-container::-webkit-scrollbar,
+.history-container::-webkit-scrollbar,
+.fight-list::-webkit-scrollbar,
+.skills-container::-webkit-scrollbar,
+.fight-details-table::-webkit-scrollbar,
+.modal-body::-webkit-scrollbar,
+.deaths-content::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+
+.settings-container::-webkit-scrollbar-track,
+.history-container::-webkit-scrollbar-track,
+.fight-list::-webkit-scrollbar-track,
+.skills-container::-webkit-scrollbar-track,
+.fight-details-table::-webkit-scrollbar-track,
+.modal-body::-webkit-scrollbar-track,
+.deaths-content::-webkit-scrollbar-track {
+    background: rgba(0, 0, 0, 0.2);
+}
+
+.settings-container::-webkit-scrollbar-thumb,
+.history-container::-webkit-scrollbar-thumb,
+.fight-list::-webkit-scrollbar-thumb,
+.skills-container::-webkit-scrollbar-thumb,
+.fight-details-table::-webkit-scrollbar-thumb,
+.modal-body::-webkit-scrollbar-thumb,
+.deaths-content::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 4px;
+}
+
+.settings-container::-webkit-scrollbar-thumb:hover,
+.history-container::-webkit-scrollbar-thumb:hover,
+.fight-list::-webkit-scrollbar-thumb:hover,
+.skills-container::-webkit-scrollbar-thumb:hover,
+.fight-details-table::-webkit-scrollbar-thumb:hover,
+.modal-body::-webkit-scrollbar-thumb:hover,
+.deaths-content::-webkit-scrollbar-thumb:hover {
     background: rgba(255, 255, 255, 0.3);
 }
 

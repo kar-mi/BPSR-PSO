@@ -28,4 +28,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // External links
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+    // Font size changes
+    onFontSizeChanged: (callback) => ipcRenderer.on('font-size-changed', (_event, percentage) => callback(percentage)),
+    broadcastFontSizeChange: (percentage) => ipcRenderer.send('broadcast-font-size-change', percentage),
 });

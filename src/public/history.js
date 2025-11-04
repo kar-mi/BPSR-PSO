@@ -5,6 +5,8 @@ import {
     formatNumber,
     getProfessionIconHtml,
     initializeOpacitySlider,
+    initializeFontSize,
+    setupFontSizeListener,
     formatDateForInput,
     renderDataList,
     parseStatData,
@@ -99,6 +101,12 @@ function updateAll() {
 
 // Initialize the history window
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize font size
+    initializeFontSize();
+
+    // Set up font size listener
+    setupFontSizeListener();
+
     // Initialize the view to show history by default
     currentView = 'history';
     columnsContainer.classList.add('hidden');

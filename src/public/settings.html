@@ -36,6 +36,7 @@
                 </div>
                 <div class="settings-tabs">
                     <button class="tab-button active" data-tab="general">General</button>
+                    <button class="tab-button" data-tab="accessibility">Accessibility</button>
                     <button class="tab-button" data-tab="network">Network</button>
                     <button class="tab-button" data-tab="keybinds">Keybinds</button>
                     <button class="tab-button" data-tab="debug">Debug</button>
@@ -82,6 +83,21 @@
                             </div>
                             <div class="settings-option-description">
                                 Automatically clear fight data when a boss spawns or when a wipe is detected (boss HP resets to max).
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Accessibility Settings Tab -->
+                    <div id="accessibility-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h3>Display Settings</h3>
+                            <div class="settings-option">
+                                <label for="fontSizeSlider">Font Size</label>
+                                <input type="range" id="fontSizeSlider" min="80" max="150" step="5" value="100" />
+                                <span id="fontSizeValue">100%</span>
+                            </div>
+                            <div class="settings-option-description">
+                                Adjust the base font size across all windows (80-150%). Default is 100%.
                             </div>
                         </div>
                     </div>

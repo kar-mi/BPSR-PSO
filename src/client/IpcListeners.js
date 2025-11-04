@@ -279,3 +279,13 @@ export function notifyHistoryWindowRefresh() {
         historyWindow.webContents.send('history-data-updated');
     }
 }
+
+// Font size change broadcasting
+ipcMain.on('broadcast-font-size-change', (_event, percentage) => {
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+        if (window && !window.isDestroyed()) {
+            window.webContents.send('font-size-changed', percentage);
+        }
+    });
+});

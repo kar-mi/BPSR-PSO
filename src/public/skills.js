@@ -1,4 +1,4 @@
-import { SERVER_URL, formatNumber, getChartColors, initializeOpacitySlider } from './utils.js';
+import { SERVER_URL, formatNumber, getChartColors, initializeOpacitySlider, initializeFontSize, setupFontSizeListener } from './utils.js';
 
 let userData = null;
 let skillsData = null;
@@ -22,6 +22,12 @@ const enemySelector = document.getElementById('enemySelector');
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
+    // Initialize font size
+    initializeFontSize();
+
+    // Set up font size listener
+    setupFontSizeListener();
+
     // Set initial enemy filter from URL parameter
     if (initialEnemy) {
         currentEnemy = initialEnemy;

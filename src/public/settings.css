@@ -367,14 +367,14 @@
 }
 
 .settings-content::-webkit-scrollbar-track {
-    background: rgba(30, 30, 30, 0.5);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .settings-content::-webkit-scrollbar-thumb {
-    background: rgba(100, 100, 100, 0.5);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
 }
 
 .settings-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(120, 120, 120, 0.7);
+    background: rgba(255, 255, 255, 0.3);
 }
