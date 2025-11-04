@@ -22,11 +22,11 @@
 
 /* Theme: Pink Pastel - Darker */
 :root[data-theme="pink"] {
-    --theme-bg-primary: rgba(210, 130, 165, var(--main-bg-opacity));
-    --theme-bg-secondary: rgba(190, 110, 145, 0.5);
+    --theme-bg-primary: rgba(255, 197, 211, var(--main-bg-opacity));
+    --theme-bg-secondary: rgba(245, 177, 195, 0.5);
     --theme-text-primary: #e0e0e0;
     --theme-text-secondary: rgba(255, 255, 255, 0.7);
-    --theme-border: rgba(170, 80, 125, 0.3);
+    --theme-border: rgba(235, 157, 180, 0.3);
 }
 
 /* Theme: Purple Pastel - Darker */
