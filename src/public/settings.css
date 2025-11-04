@@ -3,8 +3,8 @@
 .settings-tabs {
     display: flex;
     gap: 0;
-    background: rgba(30, 30, 30, 0.9);
-    border-bottom: 2px solid rgba(100, 100, 100, 0.5);
+    background: var(--theme-bg-secondary);
+    border-bottom: 2px solid var(--theme-border);
     padding: 0;
 }
 
@@ -12,7 +12,7 @@
     flex: 1;
     padding: 12px 20px;
     background: transparent;
-    color: rgba(255, 255, 255, 0.7);
+    color: var(--theme-text-secondary);
     border: none;
     border-bottom: 3px solid transparent;
     cursor: pointer;
@@ -25,12 +25,12 @@
 
 .tab-button:hover {
     background: rgba(255, 255, 255, 0.1);
-    color: rgba(255, 255, 255, 0.9);
+    color: var(--theme-text-primary);
 }
 
 .tab-button.active {
     background: rgba(255, 255, 255, 0.05);
-    color: #ffffff;
+    color: var(--theme-text-primary);
     border-bottom-color: #4a9eff;
 }
 
@@ -178,6 +178,50 @@
 
 .icon-button:active {
     background: rgba(50, 50, 50, 0.9);
+}
+
+/* File Picker Styles */
+.file-picker-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.file-picker-group input[type="text"] {
+    flex: 1;
+    padding: 8px 12px;
+    background: rgba(40, 40, 40, 0.6);
+    border: 1px solid rgba(100, 100, 100, 0.3);
+    border-radius: 4px;
+    color: var(--theme-text-primary);
+    font-size: 12px;
+}
+
+.file-picker-group input[type="text"]:read-only {
+    cursor: default;
+}
+
+.browse-button,
+.clear-button {
+    padding: 8px 16px;
+    background: rgba(60, 60, 60, 0.8);
+    border: 1px solid rgba(100, 100, 100, 0.5);
+    border-radius: 4px;
+    color: var(--theme-text-primary);
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.browse-button:hover {
+    background: rgba(70, 70, 70, 0.9);
+    border-color: #4a9eff;
+}
+
+.clear-button:hover {
+    background: rgba(70, 70, 70, 0.9);
+    border-color: #ff4a4a;
 }
 
 /* Keybind List Styles */
@@ -367,14 +411,14 @@
 }
 
 .settings-content::-webkit-scrollbar-track {
-    background: rgba(30, 30, 30, 0.5);
+    background: rgba(0, 0, 0, 0.2);
 }
 
 .settings-content::-webkit-scrollbar-thumb {
-    background: rgba(100, 100, 100, 0.5);
+    background: rgba(255, 255, 255, 0.2);
     border-radius: 4px;
 }
 
 .settings-content::-webkit-scrollbar-thumb:hover {
-    background: rgba(120, 120, 120, 0.7);
+    background: rgba(255, 255, 255, 0.3);
 }

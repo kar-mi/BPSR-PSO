@@ -28,4 +28,18 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // External links
     openExternal: (url) => ipcRenderer.invoke('open-external', url),
+
+    // Font size changes
+    onFontSizeChanged: (callback) => ipcRenderer.on('font-size-changed', (_event, percentage) => callback(percentage)),
+    broadcastFontSizeChange: (percentage) => ipcRenderer.send('broadcast-font-size-change', percentage),
+
+    // Theme changes
+    onThemeChanged: (callback) => ipcRenderer.on('theme-changed', (_event, theme) => callback(theme)),
+    broadcastThemeChange: (theme) => ipcRenderer.send('broadcast-theme-change', theme),
+
+    // Background image
+    selectBackgroundImage: () => ipcRenderer.invoke('select-background-image'),
+    onBackgroundImageChanged: (callback) => ipcRenderer.on('background-image-changed', (_event, imageData) => callback(imageData)),
+    broadcastBackgroundImageChange: (imagePath) => ipcRenderer.send('broadcast-background-image-change', imagePath),
+    loadBackgroundImageData: (imagePath) => ipcRenderer.invoke('load-background-image-data', imagePath),
 });

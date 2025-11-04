@@ -36,6 +36,7 @@
                 </div>
                 <div class="settings-tabs">
                     <button class="tab-button active" data-tab="general">General</button>
+                    <button class="tab-button" data-tab="appearance">Appearance</button>
                     <button class="tab-button" data-tab="network">Network</button>
                     <button class="tab-button" data-tab="keybinds">Keybinds</button>
                     <button class="tab-button" data-tab="debug">Debug</button>
@@ -82,6 +83,51 @@
                             </div>
                             <div class="settings-option-description">
                                 Automatically clear fight data when a boss spawns or when a wipe is detected (boss HP resets to max).
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Appearance Settings Tab -->
+                    <div id="appearance-tab" class="tab-content">
+                        <div class="settings-section">
+                            <h3>Display Settings</h3>
+                            <div class="settings-option">
+                                <label for="fontSizeSlider">Font Size</label>
+                                <input type="range" id="fontSizeSlider" min="80" max="150" step="5" value="100" />
+                                <span id="fontSizeValue">100%</span>
+                            </div>
+                            <div class="settings-option-description">
+                                Adjust the base font size across all windows (80-150%). Default is 100%.
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <h3>Theme Settings</h3>
+                            <div class="settings-option">
+                                <label for="themeSelector">Background Theme</label>
+                                <select id="themeSelector">
+                                    <option value="dark">Dark (Default)</option>
+                                    <option value="purple">Purple Pastel</option>
+                                    <option value="blue">Blue Pastel</option>
+                                    <option value="red">Red Pastel</option>
+                                    <option value="green">Green Pastel</option>
+                                </select>
+                            </div>
+                            <div class="settings-option-description">
+                                Choose a color theme for the window backgrounds.
+                            </div>
+                        </div>
+                        <div class="settings-section">
+                            <h3>Background Image (Main Window)</h3>
+                            <div class="settings-option">
+                                <label for="backgroundImagePath">Image File</label>
+                                <div class="file-picker-group">
+                                    <input type="text" id="backgroundImagePath" readonly placeholder="No image selected" />
+                                    <button id="browseBackgroundImage" class="browse-button">Browse...</button>
+                                    <button id="clearBackgroundImage" class="clear-button">Clear</button>
+                                </div>
+                            </div>
+                            <div class="settings-option-description">
+                                Choose a background image for the main window. Leave empty for solid color background.
                             </div>
                         </div>
                     </div>

@@ -1,5 +1,5 @@
 // Death Report Window JavaScript
-import { SERVER_URL, formatNumber, initializeOpacitySlider } from './utils.js';
+import { SERVER_URL, formatNumber, initializeOpacitySlider, initializeFontSize, initializeTheme, setupFontSizeListener, setupThemeListener } from './utils.js';
 
 // State variables
 let fightId = null;
@@ -132,6 +132,14 @@ function renderDamageEventsTable(damageEvents) {
 
 // Initialize the window
 async function initialize() {
+    // Initialize font size and theme
+    initializeFontSize();
+    initializeTheme();
+
+    // Set up font size and theme listeners
+    setupFontSizeListener();
+    setupThemeListener();
+
     const params = getWindowParams();
     fightId = params.fightId;
 

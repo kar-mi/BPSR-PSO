@@ -420,7 +420,17 @@ export function createApiRouter(isPaused, SETTINGS_PATH) {
                         continue;
                     }
 
-                    const summaryData = JSON.parse(await fsPromises.readFile(summaryPath, 'utf8'));
+                    // Check if summary.json exists
+                    let summaryData;
+                    try {
+                        await fsPromises.access(summaryPath);
+                        summaryData = JSON.parse(await fsPromises.readFile(summaryPath, 'utf8'));
+                    } catch (error) {
+                        // summary.json doesn't exist, skip this fight
+                        logger.warn(`Skipping fight ${timestamp}: summary.json not found`);
+                        continue;
+                    }
+
                     const fightStartTime = summaryData.startTime;
                     const fightEndTime = summaryData.endTime;
                     const fightDuration = summaryData.duration;

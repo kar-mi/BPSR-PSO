@@ -211,6 +211,151 @@ class SettingsService {
 export const settingsService = new SettingsService();
 
 /**
+ * Initialize and apply font size from settings
+ * This should be called on every page load to apply the global font size
+ */
+export async function initializeFontSize() {
+    try {
+        const fontSize = await settingsService.getSetting('fontSize', 100);
+        const scale = fontSize / 100;
+        document.documentElement.style.setProperty('--font-scale', scale);
+    } catch (error) {
+        console.error('Failed to load font size:', error);
+    }
+}
+
+/**
+ * Set up a listener for font size changes
+ * Applies zoom scale when font size is changed from settings
+ */
+export function setupFontSizeListener() {
+    if (!window.electronAPI || !window.electronAPI.onFontSizeChanged) {
+        console.warn('Font size listener not available');
+        return;
+    }
+
+    window.electronAPI.onFontSizeChanged((percentage) => {
+        const scale = percentage / 100;
+        document.documentElement.style.setProperty('--font-scale', scale);
+    });
+}
+
+/**
+ * Initialize and apply theme from settings
+ * This should be called on every page load to apply the global theme
+ */
+export async function initializeTheme() {
+    try {
+        const theme = await settingsService.getSetting('theme', 'dark');
+        document.documentElement.setAttribute('data-theme', theme);
+    } catch (error) {
+        console.error('Failed to load theme:', error);
+    }
+}
+
+/**
+ * Set up a listener for theme changes
+ * Applies theme when changed from settings
+ */
+export function setupThemeListener() {
+    if (!window.electronAPI || !window.electronAPI.onThemeChanged) {
+        console.warn('Theme listener not available');
+        return;
+    }
+
+    window.electronAPI.onThemeChanged((theme) => {
+        document.documentElement.setAttribute('data-theme', theme);
+    });
+}
+
+/**
+ * Initialize and apply background image from settings
+ * This should be called on main window load to apply the background image
+ */
+export async function initializeBackgroundImage() {
+    try {
+        const imagePath = await settingsService.getSetting('backgroundImage', '');
+        if (imagePath) {
+            // Load the image data as base64
+            const result = await window.electronAPI.loadBackgroundImageData(imagePath);
+            if (result.dataUrl) {
+                applyBackgroundImage(result.dataUrl);
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load background image:', error);
+    }
+}
+
+/**
+ * Set up a listener for background image changes
+ * Applies background image when changed from settings
+ */
+export function setupBackgroundImageListener() {
+    if (!window.electronAPI || !window.electronAPI.onBackgroundImageChanged) {
+        console.warn('Background image listener not available');
+        return;
+    }
+
+    window.electronAPI.onBackgroundImageChanged((dataUrl) => {
+        applyBackgroundImage(dataUrl);
+    });
+}
+
+/**
+ * Apply background image to the main window
+ * @param {string} dataUrl - Data URL of the background image
+ */
+function applyBackgroundImage(dataUrl) {
+    const appWrapper = document.getElementById('app-wrapper');
+    if (!appWrapper) {
+        console.warn('app-wrapper element not found');
+        return;
+    }
+
+    if (dataUrl) {
+        appWrapper.style.backgroundImage = `url("${dataUrl}")`;
+        appWrapper.style.backgroundSize = 'cover';
+        appWrapper.style.backgroundPosition = 'center';
+        appWrapper.style.backgroundRepeat = 'no-repeat';
+
+        // Make the main container very transparent so the background image is visible
+        // Set opacity to 0.05 (5%) to show the image clearly
+        document.documentElement.style.setProperty('--main-bg-opacity', '0.05');
+
+        // Update the opacity slider if it exists (on main window)
+        const opacitySlider = document.getElementById('opacitySlider');
+        if (opacitySlider) {
+            opacitySlider.value = '0.05';
+        }
+
+        // Disable backdrop blur to keep image sharp
+        const mainContainer = document.querySelector('.main-container');
+        if (mainContainer) {
+            mainContainer.style.backdropFilter = 'none';
+            mainContainer.style.webkitBackdropFilter = 'none';
+        }
+    } else {
+        // Clear background image
+        appWrapper.style.backgroundImage = '';
+        appWrapper.style.backgroundSize = '';
+        appWrapper.style.backgroundPosition = '';
+        appWrapper.style.backgroundRepeat = '';
+
+        // Re-enable backdrop blur when no image
+        const mainContainer = document.querySelector('.main-container');
+        if (mainContainer) {
+            mainContainer.style.backdropFilter = 'blur(10px)';
+            mainContainer.style.webkitBackdropFilter = 'blur(10px)';
+        }
+
+        // Reset opacity to default value when no image
+        // You can adjust the user's last preferred value by not resetting here
+        // For now, we'll leave it at the current value
+    }
+}
+
+/**
  * Initialize an opacity slider with settings API persistence
  * @param {string} sliderId - The ID of the slider element
  * @param {string} settingKey - The setting key to use for persistence

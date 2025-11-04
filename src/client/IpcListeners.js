@@ -1,7 +1,8 @@
-import { app, ipcMain, BrowserWindow, shell } from 'electron';
+import { app, ipcMain, BrowserWindow, shell, dialog } from 'electron';
 import { keybindManager } from './shortcuts.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import fs from 'fs';
 import { paths } from '../config/paths.js';
 import { loadWindowConfig, saveWindowConfig } from '../utils/windowConfig.js';
 
@@ -279,3 +280,125 @@ export function notifyHistoryWindowRefresh() {
         historyWindow.webContents.send('history-data-updated');
     }
 }
+
+// Font size change broadcasting
+ipcMain.on('broadcast-font-size-change', (_event, percentage) => {
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+        if (window && !window.isDestroyed()) {
+            window.webContents.send('font-size-changed', percentage);
+        }
+    });
+});
+
+// Theme change broadcasting
+ipcMain.on('broadcast-theme-change', (_event, theme) => {
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+        if (window && !window.isDestroyed()) {
+            window.webContents.send('theme-changed', theme);
+        }
+    });
+});
+
+// Background image file picker
+ipcMain.handle('select-background-image', async (event) => {
+    const result = await dialog.showOpenDialog({
+        title: 'Select Background Image',
+        filters: [
+            { name: 'Images', extensions: ['jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp'] },
+            { name: 'All Files', extensions: ['*'] },
+        ],
+        properties: ['openFile'],
+    });
+
+    if (result.canceled || result.filePaths.length === 0) {
+        return { canceled: true };
+    }
+
+    return { canceled: false, filePath: result.filePaths[0] };
+});
+
+// Load background image and convert to data URL
+ipcMain.handle('load-background-image-data', async (_event, imagePath) => {
+    if (!imagePath) {
+        return { dataUrl: '' };
+    }
+
+    try {
+        const imageBuffer = fs.readFileSync(imagePath);
+        const ext = path.extname(imagePath).toLowerCase();
+        let mimeType = 'image/png';
+
+        // Determine MIME type based on extension
+        switch (ext) {
+            case '.jpg':
+            case '.jpeg':
+                mimeType = 'image/jpeg';
+                break;
+            case '.png':
+                mimeType = 'image/png';
+                break;
+            case '.gif':
+                mimeType = 'image/gif';
+                break;
+            case '.bmp':
+                mimeType = 'image/bmp';
+                break;
+            case '.webp':
+                mimeType = 'image/webp';
+                break;
+        }
+
+        const base64 = imageBuffer.toString('base64');
+        const dataUrl = `data:${mimeType};base64,${base64}`;
+        return { dataUrl };
+    } catch (error) {
+        console.error('Failed to load background image:', error);
+        return { dataUrl: '', error: error.message };
+    }
+});
+
+// Background image change broadcasting
+ipcMain.on('broadcast-background-image-change', async (_event, imagePath) => {
+    // Load image data
+    let dataUrl = '';
+    if (imagePath) {
+        try {
+            const imageBuffer = fs.readFileSync(imagePath);
+            const ext = path.extname(imagePath).toLowerCase();
+            let mimeType = 'image/png';
+
+            switch (ext) {
+                case '.jpg':
+                case '.jpeg':
+                    mimeType = 'image/jpeg';
+                    break;
+                case '.png':
+                    mimeType = 'image/png';
+                    break;
+                case '.gif':
+                    mimeType = 'image/gif';
+                    break;
+                case '.bmp':
+                    mimeType = 'image/bmp';
+                    break;
+                case '.webp':
+                    mimeType = 'image/webp';
+                    break;
+            }
+
+            const base64 = imageBuffer.toString('base64');
+            dataUrl = `data:${mimeType};base64,${base64}`;
+        } catch (error) {
+            console.error('Failed to load background image for broadcast:', error);
+        }
+    }
+
+    // Broadcast to all windows
+    BrowserWindow.getAllWindows().forEach((window) => {
+        if (window && !window.isDestroyed()) {
+            window.webContents.send('background-image-changed', dataUrl);
+        }
+    });
+});
