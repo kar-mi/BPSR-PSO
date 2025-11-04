@@ -16,6 +16,7 @@ export const paths = {
     bossHpWindowConfig: './config/boss-hp-window.json',
     historyWindowConfig: './config/history-window.json',
     settingsWindowConfig: './config/settings-window.json',
+    skillsWindowConfig: './config/skills-window.json',
     keybinds: './config/keybinds.json',
     networkSettings: './config/networkSettings.json',
 };

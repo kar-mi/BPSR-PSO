@@ -71,6 +71,7 @@ export class PacketInterceptor {
             let tcp_cache = new Map();
             let tcp_last_time = 0;
             const tcp_lock = new Lock();
+            const TCP_CACHE_MAX_SIZE = 1000; // 1GB - Maximum number of out-of-order packets to cache
 
             const clearTcpCache = () => {
                 _data = Buffer.alloc(0);
@@ -295,6 +296,18 @@ export class PacketInterceptor {
                     }
 
                     if (tcp_next_seq - tcpPacket.info.seqno <= 0 || tcp_next_seq === -1) {
+                        // Check cache size limit to prevent unbounded growth
+                        if (tcp_cache.size >= TCP_CACHE_MAX_SIZE) {
+                            logger.warn(`TCP cache size limit reached (${TCP_CACHE_MAX_SIZE}), clearing oldest entries`);
+                            // Remove oldest entries (first entries in Map)
+                            const entriesToRemove = Math.floor(TCP_CACHE_MAX_SIZE * 0.3); // Remove 30%
+                            let removed = 0;
+                            for (const key of tcp_cache.keys()) {
+                                if (removed >= entriesToRemove) break;
+                                tcp_cache.delete(key);
+                                removed++;
+                            }
+                        }
                         tcp_cache.set(tcpPacket.info.seqno, buf);
                     }
 

@@ -7,6 +7,7 @@ let autoClearTimeoutCheckbox, autoClearServerCheckbox, autoClearBossSpawnCheckbo
 let fontSizeSlider, fontSizeValue;
 let themeSelector;
 let backgroundImagePath, browseBackgroundImageButton, clearBackgroundImageButton;
+let bossHpBarToggle;
 let keybindList;
 let closeButton;
 let reloadCacheButton, cacheReloadStatus, fightTimestampInput;
@@ -252,6 +253,29 @@ function applyTheme(theme) {
         window.electronAPI.broadcastThemeChange(theme);
     } catch (error) {
         console.error('Error broadcasting theme change:', error);
+    }
+}
+
+/**
+ * Boss HP Bar Toggle Functions
+ */
+async function loadBossHpBarSetting() {
+    try {
+        const showBossHpBar = await settingsService.getSetting('showBossHpBar', true);
+        bossHpBarToggle.checked = showBossHpBar;
+    } catch (error) {
+        console.error('Error loading boss HP bar setting:', error);
+    }
+}
+
+async function updateBossHpBarSetting(enabled) {
+    try {
+        await settingsService.updateSetting('showBossHpBar', enabled);
+        // Toggle the boss HP bar window immediately
+        window.electronAPI.toggleBossHpBar(enabled);
+        console.log(`Boss HP bar ${enabled ? 'enabled' : 'disabled'}`);
+    } catch (error) {
+        console.error('Error updating boss HP bar setting:', error);
     }
 }
 
@@ -563,6 +587,7 @@ function initializeDOMElements() {
     backgroundImagePath = document.getElementById('backgroundImagePath');
     browseBackgroundImageButton = document.getElementById('browseBackgroundImage');
     clearBackgroundImageButton = document.getElementById('clearBackgroundImage');
+    bossHpBarToggle = document.getElementById('bossHpBarToggle');
     keybindList = document.getElementById('keybindList');
     closeButton = document.getElementById('closeButton');
     reloadCacheButton = document.getElementById('reloadCacheButton');
@@ -591,6 +616,7 @@ document.addEventListener('DOMContentLoaded', () => {
     loadFontSize();
     loadTheme();
     loadBackgroundImage();
+    loadBossHpBarSetting();
 
     // Timeout slider
     timeoutSlider.addEventListener('input', () => {
@@ -638,6 +664,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     clearBackgroundImageButton.addEventListener('click', () => {
         clearBackgroundImage();
+    });
+
+    // Boss HP bar toggle
+    bossHpBarToggle.addEventListener('change', (event) => {
+        updateBossHpBarSetting(event.target.checked);
     });
 
     // Network adapter events

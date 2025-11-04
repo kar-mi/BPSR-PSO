@@ -1,5 +1,5 @@
 import { dialog, app } from 'electron';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -14,8 +14,7 @@ const __dirname = path.dirname(__filename);
 function isNpcapInstalled() {
     return new Promise((resolve) => {
         // This registry key for the Npcap service is a more reliable indicator of installation.
-        const command = 'reg query HKLM\\SYSTEM\\CurrentControlSet\\Services\\npcap';
-        exec(command, (error, stdout, stderr) => {
+        execFile('reg', ['query', 'HKLM\\SYSTEM\\CurrentControlSet\\Services\\npcap'], { timeout: 5000 }, (error) => {
             resolve(!error);
         });
     });

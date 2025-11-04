@@ -76,6 +76,7 @@ class BossHpWindow {
                 preload: preloadPath,
                 contextIsolation: true,
                 nodeIntegration: false,
+                sandbox: true,
             },
             alwaysOnTop: true,
             skipTaskbar: true,
@@ -113,7 +114,9 @@ class BossHpWindow {
      */
     close() {
         if (this._window) {
-            this._window.close();
+            this._saveConfig();
+            this._window.destroy();
+            this._window = null;
         }
     }
 
@@ -132,6 +135,20 @@ class BossHpWindow {
     hide() {
         if (this._window) {
             this._window.hide();
+        }
+    }
+
+    /**
+     * Sets the passthrough mode for the boss HP bar window
+     * @param {boolean} enabled - Whether to enable passthrough mode
+     */
+    setPassthrough(enabled) {
+        if (this._window) {
+            if (enabled) {
+                this._window.setIgnoreMouseEvents(true, { forward: true });
+            } else {
+                this._window.setIgnoreMouseEvents(false);
+            }
         }
     }
 }

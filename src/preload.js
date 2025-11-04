@@ -42,4 +42,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     onBackgroundImageChanged: (callback) => ipcRenderer.on('background-image-changed', (_event, imageData) => callback(imageData)),
     broadcastBackgroundImageChange: (imagePath) => ipcRenderer.send('broadcast-background-image-change', imagePath),
     loadBackgroundImageData: (imagePath) => ipcRenderer.invoke('load-background-image-data', imagePath),
+
+    // Boss HP bar toggle
+    toggleBossHpBar: (enabled) => ipcRenderer.send('toggle-boss-hp-bar', enabled),
 });
