@@ -3,6 +3,7 @@ import { SERVER_URL, initializeOpacitySlider, settingsService } from './utils.js
 // DOM elements
 let networkAdapterSelect, refreshAdaptersButton;
 let timeoutSlider, timeoutValue;
+let autoClearTimeoutCheckbox, autoClearServerCheckbox, autoClearBossSpawnCheckbox;
 let keybindList;
 let closeButton;
 let reloadCacheButton, cacheReloadStatus, fightTimestampInput;
@@ -144,6 +145,32 @@ async function updateFightTimeout(seconds) {
         console.log('Fight timeout updated successfully. Restart required for changes to take effect.');
     } catch (error) {
         console.error('Error updating fight timeout:', error);
+    }
+}
+
+/**
+ * Auto-Clear Settings Functions
+ */
+async function loadAutoClearSettings() {
+    try {
+        const autoClearOnTimeout = await settingsService.getSetting('autoClearOnTimeout', true);
+        const autoClearOnServerChange = await settingsService.getSetting('autoClearOnServerChange', true);
+        const autoClearOnBossSpawn = await settingsService.getSetting('autoClearOnBossSpawn', true);
+
+        autoClearTimeoutCheckbox.checked = autoClearOnTimeout;
+        autoClearServerCheckbox.checked = autoClearOnServerChange;
+        autoClearBossSpawnCheckbox.checked = autoClearOnBossSpawn;
+    } catch (error) {
+        console.error('Error loading auto-clear settings:', error);
+    }
+}
+
+async function updateAutoClearSetting(settingName, value) {
+    try {
+        await settingsService.updateSetting(settingName, value);
+        console.log(`${settingName} updated to ${value}. Restart required for changes to take effect.`);
+    } catch (error) {
+        console.error(`Error updating ${settingName}:`, error);
     }
 }
 
@@ -402,6 +429,9 @@ function initializeDOMElements() {
     refreshAdaptersButton = document.getElementById('refreshAdapters');
     timeoutSlider = document.getElementById('timeoutSlider');
     timeoutValue = document.getElementById('timeoutValue');
+    autoClearTimeoutCheckbox = document.getElementById('autoClearTimeoutCheckbox');
+    autoClearServerCheckbox = document.getElementById('autoClearServerCheckbox');
+    autoClearBossSpawnCheckbox = document.getElementById('autoClearBossSpawnCheckbox');
     keybindList = document.getElementById('keybindList');
     closeButton = document.getElementById('closeButton');
     reloadCacheButton = document.getElementById('reloadCacheButton');
@@ -426,11 +456,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Load initial data for General tab (default)
     loadInitialTimeout();
+    loadAutoClearSettings();
 
     // Timeout slider
     timeoutSlider.addEventListener('input', () => {
         updateTimeoutValue();
         updateFightTimeout(parseInt(timeoutSlider.value));
+    });
+
+    // Auto-clear checkboxes
+    autoClearTimeoutCheckbox.addEventListener('change', (event) => {
+        updateAutoClearSetting('autoClearOnTimeout', event.target.checked);
+    });
+
+    autoClearServerCheckbox.addEventListener('change', (event) => {
+        updateAutoClearSetting('autoClearOnServerChange', event.target.checked);
+    });
+
+    autoClearBossSpawnCheckbox.addEventListener('change', (event) => {
+        updateAutoClearSetting('autoClearOnBossSpawn', event.target.checked);
     });
 
     // Network adapter events

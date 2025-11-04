@@ -81,6 +81,26 @@
     font-weight: 500;
 }
 
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #4a9eff;
+}
+
+.checkbox-label span {
+    min-width: unset;
+    text-align: left;
+}
+
 .settings-option input[type="range"] {
     flex: 1;
     max-width: 300px;

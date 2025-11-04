@@ -26,6 +26,7 @@ let isPaused = false;
 let globalSettings = {
     autoClearOnServerChange: true,
     autoClearOnTimeout: true,
+    autoClearOnBossSpawn: true,
 };
 
 class Server {
