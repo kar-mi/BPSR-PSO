@@ -126,7 +126,7 @@ class Window {
         return this.getWindow().getMinimumSize();
     }
 
-    setPassthrough(enabled) {
+    async setPassthrough(enabled) {
         this.config.passthrough = enabled;
         const window = this.getWindow();
 
@@ -137,6 +137,17 @@ class Window {
         }
 
         window.webContents.send('passthrough-toggled', enabled);
+
+        // Also set passthrough for boss HP window if it exists
+        try {
+            const bossHpWindowModule = await import('./BossHpWindow.js');
+            const bossHpWindow = bossHpWindowModule.default;
+            if (bossHpWindow.getWindow()) {
+                bossHpWindow.setPassthrough(enabled);
+            }
+        } catch (error) {
+            // Boss HP window module might not be loaded yet
+        }
     }
 
     togglePassthrough() {

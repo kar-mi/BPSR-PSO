@@ -160,9 +160,19 @@ ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId 
 
     const mainWindow = BrowserWindow.getAllWindows()[0];
 
-    skillWindows[uid] = new BrowserWindow({
+    // Load saved position
+    const config = loadWindowConfig(paths.skillsWindowConfig, {
         width: 1400,
         height: 800,
+        x: undefined,
+        y: undefined,
+    });
+
+    skillWindows[uid] = new BrowserWindow({
+        width: config.width,
+        height: config.height,
+        x: config.x,
+        y: config.y,
         minWidth: 800,
         minHeight: 400,
         transparent: true,
@@ -197,6 +207,10 @@ ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId 
     const url = `${skillsHtmlPath}?${params.toString()}`;
     skillWindows[uid].loadFile(skillsHtmlPath, { query: Object.fromEntries(params) });
 
+    // Save position on move and close
+    skillWindows[uid].on('move', () => saveWindowConfig(skillWindows[uid], paths.skillsWindowConfig));
+    skillWindows[uid].on('resize', () => saveWindowConfig(skillWindows[uid], paths.skillsWindowConfig));
+    skillWindows[uid].on('close', () => saveWindowConfig(skillWindows[uid], paths.skillsWindowConfig));
     skillWindows[uid].on('closed', () => {
         delete skillWindows[uid];
     });
@@ -405,4 +419,38 @@ ipcMain.on('broadcast-background-image-change', async (_event, imagePath) => {
             window.webContents.send('background-image-changed', dataUrl);
         }
     });
+});
+
+// Boss HP bar toggle
+ipcMain.on('toggle-boss-hp-bar', async (_event, enabled) => {
+    try {
+        const bossHpWindowModule = await import('./BossHpWindow.js');
+        const bossHpWindow = bossHpWindowModule.default;
+
+        if (enabled) {
+            // Create boss HP window if it doesn't exist
+            if (!bossHpWindow.getWindow()) {
+                const windowModule = await import('./Window.js');
+                const window = windowModule.default;
+                const mainWindow = BrowserWindow.getAllWindows()[0];
+                const serverUrl = 'localhost:8990'; // Default server URL
+                bossHpWindow.create(serverUrl, mainWindow);
+
+                // Sync passthrough state from main window
+                if (window.getPassthrough()) {
+                    bossHpWindow.setPassthrough(true);
+                }
+
+                console.log('[IPC] Boss HP bar window created');
+            }
+        } else {
+            // Close boss HP window if it exists
+            if (bossHpWindow.getWindow()) {
+                bossHpWindow.close();
+                console.log('[IPC] Boss HP bar window closed');
+            }
+        }
+    } catch (error) {
+        console.error('[IPC] Error toggling boss HP bar:', error);
+    }
 });

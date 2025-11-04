@@ -31,9 +31,20 @@ async function initialize() {
         console.log(`[Main Process] Server started. Loading URL: ${serverUrl}`);
         window.loadURL(serverUrl);
 
-        // Create boss HP bar window as child of main window
-        console.log('[Main Process] Creating boss HP bar window...');
-        bossHpWindow.create(serverUrl, mainWindow);
+        // Create boss HP bar window as child of main window (if enabled in settings)
+        const { config } = await import('./config.js');
+        const showBossHpBar = config.GLOBAL_SETTINGS.showBossHpBar !== false; // default to true
+        if (showBossHpBar) {
+            console.log('[Main Process] Creating boss HP bar window...');
+            bossHpWindow.create(serverUrl, mainWindow);
+
+            // Sync passthrough state from main window to boss HP window
+            if (window.getPassthrough()) {
+                bossHpWindow.setPassthrough(true);
+            }
+        } else {
+            console.log('[Main Process] Boss HP bar disabled in settings');
+        }
     } catch (error) {
         console.error('[Main Process] CRITICAL: Failed to start server:', error);
         app.quit();

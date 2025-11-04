@@ -17,41 +17,49 @@ function formatNumber(num) {
  * Update boss HP display
  */
 function updateBossHp(bossData) {
-    if (!bossData || !bossHpOverlay) {
-        hideBossHp();
+    if (!bossHpOverlay) {
+        return;
+    }
+
+    // Always show the overlay
+    bossHpOverlay.classList.remove('hidden');
+
+    if (!bossData || !bossData.hp || !bossData.maxHp || bossData.hp <= 0) {
+        // Show N/A when no boss is active
+        showNoBoss();
         return;
     }
 
     const { name, hp, maxHp } = bossData;
 
-    if (hp > 0 && maxHp > 0) {
-        bossHpOverlay.classList.remove('hidden');
-        bossName.textContent = name || 'Unknown Boss';
-        bossHpCurrent.textContent = formatNumber(hp);
-        bossHpMax.textContent = formatNumber(maxHp);
+    bossName.textContent = name || 'Unknown Boss';
+    bossHpCurrent.textContent = formatNumber(hp);
+    bossHpMax.textContent = formatNumber(maxHp);
 
-        const percentage = Math.max(0, Math.min(100, (hp / maxHp) * 100));
-        bossHpPercent.textContent = percentage.toFixed(1);
-        bossHpFill.style.width = `${percentage}%`;
+    const percentage = Math.max(0, Math.min(100, (hp / maxHp) * 100));
+    bossHpPercent.textContent = percentage.toFixed(1);
+    bossHpFill.style.width = `${percentage}%`;
 
-        // Update color based on HP percentage
-        bossHpFill.classList.remove('medium', 'low');
-        if (percentage <= 20) {
-            bossHpFill.classList.add('low');
-        } else if (percentage <= 50) {
-            bossHpFill.classList.add('medium');
-        }
-    } else {
-        hideBossHp();
+    // Update color based on HP percentage
+    bossHpFill.classList.remove('medium', 'low');
+    if (percentage <= 20) {
+        bossHpFill.classList.add('low');
+    } else if (percentage <= 50) {
+        bossHpFill.classList.add('medium');
     }
 }
 
 /**
- * Hide boss HP bar
+ * Show N/A state when no boss is active
  */
-function hideBossHp() {
+function showNoBoss() {
     if (bossHpOverlay) {
-        bossHpOverlay.classList.add('hidden');
+        bossName.textContent = 'No Active Boss';
+        bossHpCurrent.textContent = 'N/A';
+        bossHpMax.textContent = 'N/A';
+        bossHpPercent.textContent = 'N/A';
+        bossHpFill.style.width = '0%';
+        bossHpFill.classList.remove('medium', 'low');
     }
 }
 
@@ -67,7 +75,7 @@ function initSocket() {
 
     socket.on('disconnect', () => {
         console.log('Boss HP bar disconnected from server');
-        hideBossHp();
+        showNoBoss();
     });
 
     socket.on('boss_hp_update', (bossData) => {
@@ -75,7 +83,7 @@ function initSocket() {
     });
 
     socket.on('data_cleared', () => {
-        hideBossHp();
+        showNoBoss();
     });
 }
 
@@ -104,5 +112,9 @@ document.addEventListener('DOMContentLoaded', () => {
     setupThemeListener();
 
     initializeDOMElements();
+
+    // Show N/A state initially
+    showNoBoss();
+
     initSocket();
 });

@@ -135,6 +135,20 @@ class BossHpWindow {
             this._window.hide();
         }
     }
+
+    /**
+     * Sets the passthrough mode for the boss HP bar window
+     * @param {boolean} enabled - Whether to enable passthrough mode
+     */
+    setPassthrough(enabled) {
+        if (this._window) {
+            if (enabled) {
+                this._window.setIgnoreMouseEvents(true, { forward: true });
+            } else {
+                this._window.setIgnoreMouseEvents(false);
+            }
+        }
+    }
 }
 
 const bossHpWindow = new BossHpWindow();
