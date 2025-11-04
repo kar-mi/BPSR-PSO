@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
 
     // Background image
     selectBackgroundImage: () => ipcRenderer.invoke('select-background-image'),
-    onBackgroundImageChanged: (callback) => ipcRenderer.on('background-image-changed', (_event, imagePath) => callback(imagePath)),
+    onBackgroundImageChanged: (callback) => ipcRenderer.on('background-image-changed', (_event, imageData) => callback(imageData)),
     broadcastBackgroundImageChange: (imagePath) => ipcRenderer.send('broadcast-background-image-change', imagePath),
+    loadBackgroundImageData: (imagePath) => ipcRenderer.invoke('load-background-image-data', imagePath),
 });
