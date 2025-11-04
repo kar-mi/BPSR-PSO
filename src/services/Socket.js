@@ -6,8 +6,9 @@ class Socket {
     init(server) {
         _io = new Server(server, {
             cors: {
-                origin: '*',
+                origin: 'http://localhost:8990',
                 methods: ['GET', 'POST'],
+                credentials: true,
             },
         });
     }

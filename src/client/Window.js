@@ -73,6 +73,7 @@ class Window {
                 preload: preloadPath,
                 contextIsolation: true,
                 nodeIntegration: false,
+                sandbox: true,
             },
             autoMenuBar: true,
         });

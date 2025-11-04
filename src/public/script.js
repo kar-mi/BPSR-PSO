@@ -340,6 +340,12 @@ function initializeDOMElements() {
     closeButton = document.getElementById('closeButton');
     historyButton = document.getElementById('historyButton');
     allButtons = [clearButton, pauseButton, helpButton, settingsButton, historyButton, closeButton];
+
+    // Attach event listeners (CSP doesn't allow inline onclick handlers)
+    if (clearButton) clearButton.addEventListener('click', clearData);
+    if (settingsButton) settingsButton.addEventListener('click', toggleSettings);
+    if (closeButton) closeButton.addEventListener('click', closeClient);
+    if (historyButton) historyButton.addEventListener('click', toggleHistory);
 }
 
 /**

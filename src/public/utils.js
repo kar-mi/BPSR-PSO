@@ -566,42 +566,82 @@ export function renderDataList(users, userColors, container, options = {}) {
         const formattedDPS = formatNumber(user.total_dps || 0);
         const damagePercentStr = damagePercent.toFixed(1);
 
-        // Use profession for display
+        // Create main bar using DOM methods for security
+        const mainBar = document.createElement('div');
+        mainBar.className = 'main-bar';
+
+        // Create DPS bar fill
+        const dpsBarFill = document.createElement('div');
+        dpsBarFill.className = 'dps-bar-fill';
+        dpsBarFill.style.width = `${damagePercent}%`;
+        dpsBarFill.style.backgroundColor = colors.dps;
+        mainBar.appendChild(dpsBarFill);
+
+        // Create content div
+        const content = document.createElement('div');
+        content.className = 'content';
+
+        // Add rank
+        const rankSpan = document.createElement('span');
+        rankSpan.className = 'rank';
+        rankSpan.textContent = `${index + 1}.`;
+        content.appendChild(rankSpan);
+
+        // Add class icon if available
+        const professionString = user.profession ? user.profession.trim() : '';
+        if (professionString) {
+            const mainProfession = professionString.split('(')[0].trim();
+            const iconFileName = mainProfession.toLowerCase().replace(/ /g, '_') + '.png';
+            const classIcon = document.createElement('img');
+            classIcon.src = `assets/${iconFileName}`;
+            classIcon.className = 'class-icon';
+            classIcon.alt = mainProfession;
+            classIcon.onerror = () => { classIcon.style.display = 'none'; };
+            content.appendChild(classIcon);
+        }
+
+        // Add name with profession
+        const nameSpan = document.createElement('span');
+        nameSpan.className = 'name';
         const professionDisplay = user.profession || 'Unknown';
         const displayName = user.fightPoint
             ? `${user.name} ${options.showProfession !== false ? '- ' + professionDisplay : ''} (${user.fightPoint})`
             : `${user.name}${options.showProfession !== false ? ' - ' + professionDisplay : ''}`;
+        nameSpan.textContent = displayName;
+        content.appendChild(nameSpan);
 
-        const classIconHtml = getProfessionIconHtml(user.profession);
+        // Add stats
+        const statsSpan = document.createElement('span');
+        statsSpan.className = 'stats';
+        statsSpan.textContent = `${formattedDamageTotal} (${formattedDPS} DPS, ${damagePercentStr}%)`;
+        content.appendChild(statsSpan);
 
-        let subBarHtml = '';
+        mainBar.appendChild(content);
+        item.appendChild(mainBar);
+
+        // Add healing sub-bar if applicable
         if (healingTotal > 0 || (user.total_hps || 0) > 0) {
             const formattedHealingTotal = formatNumber(healingTotal);
             const formattedHPS = formatNumber(user.total_hps || 0);
             const healingPercentStr = healingPercent.toFixed(1);
 
-            subBarHtml = `
-                <div class="sub-bar">
-                    <div class="hps-bar-fill" style="width: ${healingPercent}%; background-color: ${colors.hps};"></div>
-                    <div class="hps-stats">
-                       ${formattedHealingTotal} (${formattedHPS} HPS, ${healingPercentStr}%)
-                    </div>
-                </div>
-            `;
+            const subBar = document.createElement('div');
+            subBar.className = 'sub-bar';
+
+            const hpsBarFill = document.createElement('div');
+            hpsBarFill.className = 'hps-bar-fill';
+            hpsBarFill.style.width = `${healingPercent}%`;
+            hpsBarFill.style.backgroundColor = colors.hps;
+            subBar.appendChild(hpsBarFill);
+
+            const hpsStats = document.createElement('div');
+            hpsStats.className = 'hps-stats';
+            hpsStats.textContent = `${formattedHealingTotal} (${formattedHPS} HPS, ${healingPercentStr}%)`;
+            subBar.appendChild(hpsStats);
+
+            item.appendChild(subBar);
         }
 
-        item.innerHTML = `
-            <div class="main-bar">
-                <div class="dps-bar-fill" style="width: ${damagePercent}%; background-color: ${colors.dps};"></div>
-                <div class="content">
-                    <span class="rank">${index + 1}.</span>
-                    ${classIconHtml}
-                    <span class="name">${displayName}</span>
-                    <span class="stats">${formattedDamageTotal} (${formattedDPS} DPS, ${damagePercentStr}%)</span>
-                </div>
-            </div>
-            ${subBarHtml}
-        `;
         fragment.appendChild(item);
     });
 

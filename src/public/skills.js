@@ -19,6 +19,7 @@ const initialEnemy = urlParams.get('enemy'); // Enemy filter from fight history
 const columnsContainer = document.getElementById('columnsContainer');
 const dataTypeSelector = document.getElementById('dataTypeSelector');
 const enemySelector = document.getElementById('enemySelector');
+const closeButton = document.getElementById('closeButton');
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async () => {
@@ -38,6 +39,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     initializeOpacitySlider('skillsOpacitySlider', 'skillsBackgroundOpacity', '--main-bg-opacity', 0.05);
     initializeDataTypeSelector();
     initializeEnemySelector();
+
+    // Set up close button
+    if (closeButton) {
+        closeButton.addEventListener('click', () => window.close());
+    }
     await loadSkillData();
     await loadTimeSeriesData();
     populateEnemyDropdown();

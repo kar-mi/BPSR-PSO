@@ -8,9 +8,15 @@ let skillNamesMap = {};
 // DOM elements
 const deathReportContent = document.getElementById('deathReportContent');
 const deathsTitle = document.getElementById('deathsTitle');
+const closeButton = document.getElementById('closeButton');
 
 // Initialize opacity slider
 initializeOpacitySlider('deathsOpacitySlider', 'deaths-window');
+
+// Set up close button
+if (closeButton) {
+    closeButton.addEventListener('click', () => window.close());
+}
 
 // Get window parameters from URL or Electron API
 function getWindowParams() {

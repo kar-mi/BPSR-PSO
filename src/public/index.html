@@ -3,13 +3,14 @@
     <head>
         <meta charset="UTF-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' https://cdn.socket.io https://cdn.jsdelivr.net; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' ws://localhost:* http://localhost:*; img-src 'self' data:; object-src 'none'; base-uri 'self';" />
         <title>BPSR-PSO</title>
         <link
             href="https://fonts.googleapis.com/css2?family=Roboto+Condensed:wght@400;700&display=swap"
             rel="stylesheet"
         />
         <link rel="stylesheet" href="style.css" />
-        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+        <script src="https://cdn.socket.io/4.7.2/socket.io.min.js" integrity="sha384-mZLF4UVrpi/QTWPA7BjNPEnkIfRFn4ZEO3Qt/HFklTJBj/gBOV8G3HcKn4NfQblz" crossorigin="anonymous"></script>
     </head>
     <body class="main-window">
         <!-- Update notification popup -->
@@ -47,9 +48,9 @@
                         <span id="encounterTimer" class="encounter-time"></span>
                     </div>
                     <div class="button-group">
-                        <button id="clearButton" onclick="clearData()" title="Clear Data">Clear</button>
-                        <button id="historyButton" onclick="toggleHistory()" title="Fight History">📊</button>
-                        <button id="settingsButton" onclick="toggleSettings()" title="Settings">⚙️</button>
+                        <button id="clearButton" title="Clear Data">Clear</button>
+                        <button id="historyButton" title="Fight History">📊</button>
+                        <button id="settingsButton" title="Settings">⚙️</button>
                         <div class="opacity-control">
                             <label for="opacitySlider">Opacity</label>
                             <input
@@ -62,7 +63,7 @@
                                 title="Adjust Window Opacity"
                             />
                         </div>
-                        <button id="closeButton" onclick="closeClient()" title="Close Client">X</button>
+                        <button id="closeButton" title="Close Client">X</button>
                         <span id="passthroughKeybind" class="passthrough-title hidden"> </span>
                         <span id="passthroughTitle" class="passthrough-title hidden"> Passthrough Enabled </span>
                     </div>

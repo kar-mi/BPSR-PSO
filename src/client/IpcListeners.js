@@ -2,7 +2,7 @@ import { app, ipcMain, BrowserWindow, shell, dialog } from 'electron';
 import { keybindManager } from './shortcuts.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
-import fs from 'fs';
+import { promises as fsPromises } from 'fs';
 import { paths } from '../config/paths.js';
 import { loadWindowConfig, saveWindowConfig } from '../utils/windowConfig.js';
 
@@ -73,6 +73,7 @@ ipcMain.on('open-history-window', async (event) => {
             preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
+            sandbox: true,
         },
         autoMenuBar: false,
         parent: mainWindow,
@@ -130,6 +131,7 @@ ipcMain.on('open-settings-window', async (event) => {
             preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
+            sandbox: true,
         },
         autoMenuBar: false,
         parent: mainWindow,
@@ -171,6 +173,7 @@ ipcMain.on('open-skills-window', async (event, { uid, name, profession, fightId 
             preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
+            sandbox: true,
         },
         autoMenuBar: false,
         parent: mainWindow,
@@ -221,6 +224,7 @@ ipcMain.on('open-deaths-window', async (event, { fightId }) => {
             preload: preloadPath,
             contextIsolation: true,
             nodeIntegration: false,
+            sandbox: true,
         },
         autoMenuBar: false,
         parent: mainWindow,
@@ -326,7 +330,7 @@ ipcMain.handle('load-background-image-data', async (_event, imagePath) => {
     }
 
     try {
-        const imageBuffer = fs.readFileSync(imagePath);
+        const imageBuffer = await fsPromises.readFile(imagePath);
         const ext = path.extname(imagePath).toLowerCase();
         let mimeType = 'image/png';
 
@@ -365,7 +369,7 @@ ipcMain.on('broadcast-background-image-change', async (_event, imagePath) => {
     let dataUrl = '';
     if (imagePath) {
         try {
-            const imageBuffer = fs.readFileSync(imagePath);
+            const imageBuffer = await fsPromises.readFile(imagePath);
             const ext = path.extname(imagePath).toLowerCase();
             let mimeType = 'image/png';
 

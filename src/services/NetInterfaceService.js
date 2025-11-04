@@ -1,4 +1,4 @@
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import cap from 'cap';
 import fs from 'fs';
 import { paths } from '../config/paths.js';
@@ -102,7 +102,7 @@ export function detectTraffic(deviceIndex, devices) {
 export async function findByRoute(devices) {
     try {
         const stdout = await new Promise((resolve, reject) => {
-            exec('route print 0.0.0.0', (error, stdout) => {
+            execFile('route', ['print', '0.0.0.0'], { timeout: 5000 }, (error, stdout) => {
                 if (error) {
                     reject(error);
                 } else {

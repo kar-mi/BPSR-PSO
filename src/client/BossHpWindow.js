@@ -76,6 +76,7 @@ class BossHpWindow {
                 preload: preloadPath,
                 contextIsolation: true,
                 nodeIntegration: false,
+                sandbox: true,
             },
             alwaysOnTop: true,
             skipTaskbar: true,
