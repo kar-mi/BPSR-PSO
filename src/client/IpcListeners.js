@@ -1,4 +1,4 @@
-import { app, ipcMain, BrowserWindow } from 'electron';
+import { app, ipcMain, BrowserWindow, shell } from 'electron';
 import { keybindManager } from './shortcuts.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -260,6 +260,17 @@ ipcMain.handle('get-window-bounds', (event) => {
         return window.getBounds();
     }
     return null;
+});
+
+// Open external URL in default browser
+ipcMain.handle('open-external', async (event, url) => {
+    try {
+        await shell.openExternal(url);
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to open external URL:', error);
+        return { success: false, error: error.message };
+    }
 });
 
 // Helper function to notify history window
