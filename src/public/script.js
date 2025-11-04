@@ -452,10 +452,14 @@ function initializeUpdateNotification() {
         updateNotification.classList.add('hidden');
     });
 
-    viewReleaseBtn.addEventListener('click', () => {
+    viewReleaseBtn.addEventListener('click', async () => {
         if (updateNotificationData && updateNotificationData.releaseUrl) {
             // Open release URL in default browser
-            window.open(updateNotificationData.releaseUrl, '_blank');
+            try {
+                await window.electronAPI.openExternal(updateNotificationData.releaseUrl);
+            } catch (error) {
+                console.error('Failed to open release URL:', error);
+            }
         }
         updateNotification.classList.add('hidden');
     });

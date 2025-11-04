@@ -73,10 +73,10 @@ body {
 .boss-hp-fill {
     height: 100%;
     width: 100%;
-    background: linear-gradient(90deg, #ff1744 0%, #d50000 100%);
+    background: linear-gradient(90deg, #0e852c 0%, #047902 100%);
     transition: width 0.3s ease, background 0.3s ease;
     border-radius: 10px;
-    box-shadow: 0 0 10px rgba(255, 23, 68, 0.5);
+    box-shadow: 0 0 10px rgba(23, 255, 69, 0.21);
     animation: pulse 2s ease-in-out infinite;
 }
 

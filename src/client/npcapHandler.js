@@ -38,12 +38,12 @@ export async function checkForNpcap() {
 
     const userResponse = await dialog.showMessageBox({
         type: 'warning',
-        buttons: ['Install Now', 'Exit'],
+        buttons: ['Exit'],
         defaultId: 0,
         cancelId: 1,
         title: 'Required Software Missing',
         message: 'NpCap is not installed',
-        detail: 'This application requires NpCap (in API compatibility mode) to function.\n\nWould you like to run the bundled installer now?',
+        detail: 'This application requires NpCap (in API compatibility mode) to function.\n\nPlease visit https://npcap.com/#download to download it',
     });
 
     if (userResponse.response === 0) {

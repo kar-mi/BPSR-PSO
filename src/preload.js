@@ -25,4 +25,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     // Window resizing
     resizeWindow: (bounds) => ipcRenderer.send('resize-window', bounds),
     getWindowBounds: () => ipcRenderer.invoke('get-window-bounds'),
+
+    // External links
+    openExternal: (url) => ipcRenderer.invoke('open-external', url),
 });
