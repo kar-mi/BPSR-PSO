@@ -1289,6 +1289,17 @@ body.main-window {
     z-index: 10;
 }
 
+.stats-table thead tr {
+    display: grid;
+    grid-template-columns: 50px minmax(150px, 1fr) 120px 100px 90px 90px 90px;
+    gap: 0px;
+    padding: 0 8px 0 18px;
+}
+
+.stats-table thead tr.tanking-header {
+    grid-template-columns: 50px minmax(150px, 1fr) 120px 100px 90px;
+}
+
 .stats-table th {
     padding: 10px 8px;
     text-align: left;
@@ -1346,14 +1357,14 @@ body.main-window {
 .stats-row-content {
     position: relative;
     display: grid;
-    grid-template-columns: 50px 1fr auto auto auto auto auto;
+    grid-template-columns: 50px minmax(150px, 1fr) 120px 100px 90px 90px 90px;
     gap: 0px;
     padding: 10px 8px;
     z-index: 1;
 }
 
 .stats-row-content.tanking-row {
-    grid-template-columns: 50px 1fr auto auto auto;
+    grid-template-columns: 50px minmax(150px, 1fr) 120px 100px 90px;
 }
 
 .stats-cell {
@@ -1375,7 +1386,6 @@ body.main-window {
 .number-cell {
     justify-content: flex-end;
     font-family: 'Courier New', monospace;
-    min-width: 70px;
 }
 
 .class-icon-small {

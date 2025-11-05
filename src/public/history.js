@@ -533,16 +533,9 @@ function renderFightDetailsTable() {
         }
     });
 
-    // Helper function to get sort class
-    const getSortClass = (column) => {
-        if (currentSortColumn === column) {
-            return currentSortOrder === 'asc' ? 'sortable sorted-asc' : 'sortable sorted-desc';
-        }
-        return 'sortable';
-    };
-
     // Determine column labels based on data type
     const dpsLabel = isTanking ? 'DTPS' : isDamage ? 'DPS' : 'HPS';
+    const percentLabel = isTanking ? 'Tank %' : isDamage ? 'Dmg %' : 'Heal %';
     const showCritLucky = !isTanking; // Don't show crit/lucky for tanking
 
     // Create table HTML
@@ -550,13 +543,13 @@ function renderFightDetailsTable() {
         <table class="stats-table ${isTanking ? 'tanking-table' : ''}">
             <thead>
                 <tr class="${isTanking ? 'tanking-header' : ''}">
-                    <th class="${getSortClass('rank')}" data-sort="rank">Rank</th>
-                    <th class="${getSortClass('name')}" data-sort="name">Name</th>
-                    <th class="${getSortClass('total')}" data-sort="total">Total</th>
-                    <th class="${getSortClass('dps')}" data-sort="dps">${dpsLabel}</th>
-                    <th class="${getSortClass('percent')}" data-sort="percent">%</th>
-                    ${showCritLucky ? `<th class="${getSortClass('crit')}" data-sort="crit">Crit %</th>` : ''}
-                    ${showCritLucky ? `<th class="${getSortClass('lucky')}" data-sort="lucky">Lucky %</th>` : ''}
+                    <th>Rank</th>
+                    <th>Name</th>
+                    <th>Total</th>
+                    <th>${dpsLabel}</th>
+                    <th>${percentLabel}</th>
+                    ${showCritLucky ? `<th>Crit %</th>` : ''}
+                    ${showCritLucky ? `<th>Lucky %</th>` : ''}
                 </tr>
             </thead>
             <tbody>
@@ -630,25 +623,6 @@ function renderFightDetailsTable() {
     `;
 
     fightDetailsTable.innerHTML = tableHTML;
-
-    // Add click handlers to table headers for sorting
-    const headers = fightDetailsTable.querySelectorAll('th[data-sort]');
-    headers.forEach((header) => {
-        header.addEventListener('click', () => {
-            const sortColumn = header.getAttribute('data-sort');
-
-            // Toggle sort order if clicking the same column
-            if (currentSortColumn === sortColumn) {
-                currentSortOrder = currentSortOrder === 'asc' ? 'desc' : 'asc';
-            } else {
-                // New column, default to descending (except for name)
-                currentSortColumn = sortColumn;
-                currentSortOrder = sortColumn === 'name' ? 'asc' : 'desc';
-            }
-
-            renderFightDetailsTable();
-        });
-    });
 
     // Add double-click handlers to table rows for skill breakdown
     const rows = fightDetailsTable.querySelectorAll('.stats-row[data-uid]');
